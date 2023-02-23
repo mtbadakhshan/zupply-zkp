@@ -56,30 +56,63 @@ def all_0s_hash():
     print("const libff::bit_vector hash_bv = %s;" % cpp_val(h))
 
 def generate_merkle_tree(leaves):
-    print(leaves)
-    n_layers = math.ceil(math.log2(len(leaves)))
-    print("n_layers =",  n_layers)
-
-    # layer_size = len(leaves)
-    layer = leaves
+    n_layers = math.ceil(math.log2(len(leaves))) 
     tree = {}
-    for i in range(n_layers):
-        tree["layer %d" % i] = []
-        for j in range(len(layer) >> 1 ):
-            s1 = bytes_to_words(layer[j])
-            s2 = bytes_to_words(layer[j+1])
-            node1 = '%s' % (', '.join('0x%08x' % x for x in s1))
-            node2 = '%s' % (', '.join('0x%08x' % x for x in s2))
-            tree["layer %d" % i].append(node1)
-            tree["layer %d" % i].append(node2)
+    ### Adding leaves to the tree
+    tree["layer 0"] = []
+    for leaf in leaves:
+        tree["layer 0"].append(leaf)
+    for i in range(n_layers ):
+        layer = tree["layer %d" % i]
+        tree["layer %d" % (i+1)] = []
+        for j in range(len(layer) // 2 ):
+            h = H_bytes(layer[2*j] + layer[2*j + 1])
+            tree["layer %d" % (i+1)].append(h)
+    return tree
+
+def make_merkle_proof(tree, key):
+    path = []
+    ### starts from layer 0 (leaves) to layer n (root)
+    for layer in tree:
+        # print(layer)
+        # print(tree[layer])
+        # print("key = ", key , " | len(tree[layer]) = ", len(tree[layer]))
+        if len(tree[layer]) == 1:
+            path.append(['root', tree[layer][0]])
+            return path
+        if(key % 2):
+            path.append(['left' ,tree[layer][key - 1]])
+        else:
+            path.append(['right', tree[layer][key + 1]])
+        key = key // 2
+    return 'Error'
+
+def verify_merkle_proof(leaf, path):
+    for i in range(len(path)):
+        if(path[i][0] == 'right'):
+            leaf = H_bytes(leaf + path[i][1])
+        elif(path[i][0] == 'left'):
+            leaf = H_bytes(path[i][1] + leaf)
+        else:
+            return leaf == path[i][1]
 
 
-    print(len(tree['layer 0']))
+
 
 
 
 if __name__ == '__main__':
     # random.seed(0) # for reproducibility
     # all_0s_hash()
-    leaves = [[0]*BLOCK_BYTES] * 4
-    generate_merkle_tree(leaves)
+    N = 8
+    leaves = [[0]*HASH_BYTES for _ in range(N)]
+    ### Initializing with key values
+    for i in range(N):
+        leaves[i][-1] = i
+    print(len(leaves[0]))
+    tree = generate_merkle_tree(leaves)
+    print(tree)
+    path = make_merkle_proof(tree, 2)
+    print("path : ", path)
+
+    print("Verify: ", verify_merkle_proof(leaves[2], path))
