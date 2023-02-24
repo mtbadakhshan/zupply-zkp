@@ -45,10 +45,32 @@ template<typename FieldT, typename HashT>
 void proof_auth()
 {
 
+    const size_t digest_len = HashT::get_digest_len();
+
+     
+    /* Make a Protoboard */
+    protoboard<FieldT> pb;
+
+    
+    /* Inputs */
+
+    block_variable<FieldT> input(pb, SHA256_block_size, "input");
+
+    /* Building the MHT */
+    const size_t tree_depth = 20;
+    pb_variable_array<FieldT> address_bits_va;
+    address_bits_va.allocate(pb, tree_depth, "address_bits");
+    digest_variable<FieldT> leaf_digest(pb, digest_len, "input_block");
+    digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
+    merkle_authentication_path_variable<FieldT, HashT> path_var(pb, tree_depth, "path_var");
+    merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
+
+    /* Build CRH to get commitment cm */
+    // digest_variable<FieldT> cm(pb, SHA256_digest_size, "cm");
+    sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
 
     /* prepare test */
-    const size_t digest_len = HashT::get_digest_len();
-    const size_t tree_depth = 20;
+
     std::vector<merkle_authentication_node> path(tree_depth);
 
     libff::bit_vector prev_hash(digest_len);
@@ -77,17 +99,11 @@ void proof_auth()
     libff::bit_vector root = prev_hash;
 
 
-    /* execute test */
-    protoboard<FieldT> pb;
-    pb_variable_array<FieldT> address_bits_va;
-    address_bits_va.allocate(pb, tree_depth, "address_bits");
-    digest_variable<FieldT> leaf_digest(pb, digest_len, "input_block");
-    digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
-    merkle_authentication_path_variable<FieldT, HashT> path_var(pb, tree_depth, "path_var");
-    merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
 
+   
     path_var.generate_r1cs_constraints();
     ml.generate_r1cs_constraints();
+    crh.generate_r1cs_constraints();
 
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);

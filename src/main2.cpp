@@ -37,6 +37,9 @@ void Auth_proof()
     f.generate_r1cs_witness();
     output.generate_r1cs_witness(hash_bv);
 
+
+    
+
     assert(pb.is_satisfied());
 }
 
