@@ -1,51 +1,25 @@
-/**
+/** @file
+ *****************************************************************************
+
+ Implementation of interfaces for the Merkle tree check read.
+
+ See merkle_tree_check_read_gadget.hpp .
+
  *****************************************************************************
  * @author     This file is part of libsnark, developed by SCIPR Lab
  *             and contributors (see AUTHORS).
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
-#ifdef CURVE_BN128
-#include <libff/algebra/curves/bn128/bn128_pp.hpp>
-#endif
+#ifndef MY_MERKLE_TREE_CHECK_READ_GADGET_TCC_
+#define MY_MERKLE_TREE_CHECK_READ_GADGET_TCC_
 
-// #ifndef NDEBUG
-// #define NDEBUG
-
-
-#include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_tree_check_read_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_tree_check_update_gadget.hpp>
-
-#include <libsnark/common/data_structures/merkle_tree.hpp>
-#include <libsnark/gadgetlib1/gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/crh_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/digest_selector_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/hash_io.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_authentication_path_variable.hpp>
-
-#include "libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
-#include "libsnark/common/default_types/r1cs_ppzksnark_pp.hpp"
-
-
-using namespace libsnark;
-
-// template<typename ppT>
-// void test_all_merkle_tree_gadgets()
-// {
-//     typedef libff::Fr<ppT> FieldT;
-//     test_merkle_tree_check_read_gadget<FieldT, CRH_with_bit_out_gadget<FieldT> >();
-//     test_merkle_tree_check_read_gadget<FieldT, sha256_two_to_one_hash_gadget<FieldT> >();
-
-//     test_merkle_tree_check_update_gadget<FieldT, CRH_with_bit_out_gadget<FieldT> >();
-//     test_merkle_tree_check_update_gadget<FieldT, sha256_two_to_one_hash_gadget<FieldT> >();
-// }
+namespace libsnark {
 
 template<typename FieldT, typename HashT>
-void proof_auth()
+void my_test_merkle_tree_check_read_gadget()
 {
-
-
+//#ifndef NDEBUG
     /* prepare test */
     const size_t digest_len = HashT::get_digest_len();
     const size_t tree_depth = 20;
@@ -76,7 +50,6 @@ void proof_auth()
     }
     libff::bit_vector root = prev_hash;
 
-
     /* execute test */
     protoboard<FieldT> pb;
     pb_variable_array<FieldT> address_bits_va;
@@ -100,29 +73,18 @@ void proof_auth()
     leaf_digest.generate_r1cs_witness(leaf);
     root_digest.generate_r1cs_witness(root);
     assert(pb.is_satisfied());
+    printf("pb.is_satisfied(): %d\n", pb.is_satisfied());
 
     const size_t num_constraints = pb.num_constraints();
     const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth);
     assert(num_constraints == expected_constraints);
+    printf("num_constraints: %ld\n", num_constraints);
 
-
-
-    const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(
-            constraint_system);
-
-    printf("Here2!\n");
-
+//#else // NDEBUG
+//    printf("All tests here depend on assert() which is disabled by -DNDEBUG. Please recompile and run again.\n");
+//#endif // NDEBUG
 }
 
+} // libsnark
 
-
-int main(void)
-
-{
-    libff::start_profiling();
-    libff::bn128_pp::init_public_params();
-    typedef libff::Fr<libff::bn128_pp> FieldT;
-    proof_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT> >();
-
-}
+#endif // MERKLE_TREE_CHECK_READ_GADGET_TCC_
