@@ -150,8 +150,6 @@ void proof_auth()
     std::cout << "Auxiliary (private) input: " << pb.auxiliary_input() << std::endl;
     // std::cout << "Verification status: " << verified << std::endl;
 
-    std::cout << "address: " << address << std::endl;
-
     printf("Here2!\n");
 
 }
