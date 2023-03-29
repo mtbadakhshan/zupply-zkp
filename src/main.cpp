@@ -5,13 +5,13 @@
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
-#ifdef CURVE_BN128
+// #ifdef CURVE_BN128
 #include <libff/algebra/curves/bn128/bn128_pp.hpp>
-#endif
-
-// #ifdef CURVE_ALT_BN128
-#include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 // #endif
+
+#ifdef CURVE_ALT_BN128
+#include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
+#endif
 
 // #ifndef NDEBUG
 // #define NDEBUG
@@ -46,7 +46,7 @@ using namespace libsnark;
 //     test_merkle_tree_check_update_gadget<FieldT, sha256_two_to_one_hash_gadget<FieldT> >();
 // }
 
-template<typename FieldT, typename HashT>
+template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
 
@@ -58,15 +58,15 @@ void proof_auth()
 
     
     /* Inputs */
-
-    block_variable<FieldT> input(pb, SHA256_block_size, "input");
+    digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
+    // block_variable<FieldT> input(pb, SHA256_block_size, "input");
 
     /* Building the MHT */
-    const size_t tree_depth = 20;
+    const size_t tree_depth = 2;
     pb_variable_array<FieldT> address_bits_va;
     address_bits_va.allocate(pb, tree_depth, "address_bits");
     digest_variable<FieldT> leaf_digest(pb, digest_len, "input_block");
-    digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
+    
     merkle_authentication_path_variable<FieldT, HashT> path_var(pb, tree_depth, "path_var");
     merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
 
@@ -74,6 +74,7 @@ void proof_auth()
     // digest_variable<FieldT> cm(pb, SHA256_digest_size, "cm");
     // sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
 
+    pb.set_input_sizes(digest_len);
     /* prepare test */
 
     std::vector<merkle_authentication_node> path(tree_depth);
@@ -105,20 +106,25 @@ void proof_auth()
 
 
 
+    
    
     path_var.generate_r1cs_constraints();
     ml.generate_r1cs_constraints();
     // crh.generate_r1cs_constraints();
 
+    root_digest.generate_r1cs_witness(root);
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
     leaf_digest.generate_r1cs_witness(leaf);
     path_var.generate_r1cs_witness(address, path);
     ml.generate_r1cs_witness();
 
+    
+    
+
     /* make sure that read checker didn't accidentally overwrite anything */
-    // address_bits_va.fill_with_bits(pb, address_bits);
-    // leaf_digest.generate_r1cs_witness(leaf);
+    address_bits_va.fill_with_bits(pb, address_bits);
+    leaf_digest.generate_r1cs_witness(leaf);
     root_digest.generate_r1cs_witness(root);
     assert(pb.is_satisfied());
 
@@ -129,26 +135,33 @@ void proof_auth()
 
 
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<default_r1cs_ppzksnark_pp> keypair = r1cs_ppzksnark_generator<default_r1cs_ppzksnark_pp>(
-            constraint_system);
+    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
 
+
+    libff::print_header("Preprocess verification key");
+    r1cs_ppzksnark_processed_verification_key<ppT> pvk = r1cs_ppzksnark_verifier_process_vk<ppT>(keypair.vk);
 
 
     printf("Generating proof:!\n");
 
-    const r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> proof = r1cs_ppzksnark_prover<default_r1cs_ppzksnark_pp>(
-            keypair.pk, pb.primary_input(), pb.auxiliary_input());
+    const r1cs_ppzksnark_proof<ppT> proof = r1cs_ppzksnark_prover<ppT>(keypair.pk, pb.primary_input(), pb.auxiliary_input());
 
 
-    // printf("Verifing:!\n");
-    // bool verified = r1cs_ppzksnark_verifier_strong_IC<default_r1cs_ppzksnark_pp>(keypair.vk, pb.primary_input(), proof);
+    printf("Verifing:!\n");
+    bool verified = r1cs_ppzksnark_verifier_strong_IC<ppT>(keypair.vk, pb.primary_input(), proof);
 
     std::cout << "FOR SUCCESSFUL VERIFICATION" << std::endl;
     std::cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << std::endl;
     std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
     std::cout << "Primary (public) input: " << pb.primary_input() << std::endl;
+    // std::cout << "num_inputs: " << pb.num_inputs() << std::endl;
+    std::cout << "root: ";
+    for(int i = 0; i < digest_len; i++){
+        std::cout  << root[i] ;
+    }
+    
     std::cout << "Auxiliary (private) input: " << pb.auxiliary_input() << std::endl;
-    // std::cout << "Verification status: " << verified << std::endl;
+    std::cout << "Verification status: " << verified << std::endl;
 
     std::cout << "address: " << address << std::endl;
 
@@ -162,8 +175,8 @@ int main(void)
 
 {
     libff::start_profiling();
-    libff::alt_bn128_pp::init_public_params();
-    typedef libff::Fr<libff::alt_bn128_pp> FieldT;
-    proof_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT> >();
+    libff::bn128_pp::init_public_params();
+    typedef libff::Fr<libff::bn128_pp> FieldT;
+    proof_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT>, libff::bn128_pp>();
 
 }
