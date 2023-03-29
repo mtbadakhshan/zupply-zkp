@@ -5,13 +5,13 @@
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
-// #ifdef CURVE_BN128
+#ifdef CURVE_BN128
 #include <libff/algebra/curves/bn128/bn128_pp.hpp>
-// #endif
-
-#ifdef CURVE_ALT_BN128
-#include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 #endif
+
+// #ifdef CURVE_ALT_BN128
+// #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
+// #endif
 
 // #ifndef NDEBUG
 // #define NDEBUG
@@ -32,23 +32,59 @@
 #include "libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
 #include "libsnark/common/default_types/r1cs_ppzksnark_pp.hpp"
 
+#include "circuit.hpp"
+
 
 using namespace libsnark;
 
-// template<typename ppT>
-// void test_all_merkle_tree_gadgets()
-// {
-//     typedef libff::Fr<ppT> FieldT;
-//     test_merkle_tree_check_read_gadget<FieldT, CRH_with_bit_out_gadget<FieldT> >();
-//     test_merkle_tree_check_read_gadget<FieldT, sha256_two_to_one_hash_gadget<FieldT> >();
 
-//     test_merkle_tree_check_update_gadget<FieldT, CRH_with_bit_out_gadget<FieldT> >();
-//     test_merkle_tree_check_update_gadget<FieldT, sha256_two_to_one_hash_gadget<FieldT> >();
-// }
+
+/* Trusted Setup */
+template<typename FieldT, typename HashT>
+protoboard<FieldT> setup_auth()
+{
+    const size_t digest_len = HashT::get_digest_len();
+     
+    /* Make a Protoboard */
+    protoboard<FieldT> pb;
+    
+    /* Public Inputs */
+    digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
+
+    /* Private Inputs */
+    block_variable<FieldT> input(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
+
+    /* Building the MHT */
+    const size_t tree_depth = 2;
+    pb_variable_array<FieldT> address_bits_va;
+    address_bits_va.allocate(pb, tree_depth, "address_bits");
+    digest_variable<FieldT> leaf_digest(pb, digest_len, "input_block");
+    merkle_authentication_path_variable<FieldT, HashT> path_var(pb, tree_depth, "path_var");
+    merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
+
+    /* Building CRH to get commitment cm */
+    digest_variable<FieldT> cm(pb, SHA256_digest_size, "cm");
+    sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
+
+    /* Setting the public input*/ 
+    //the first 256 bits assigned to the protoboard which are root_digest's bits, are determined as public inputs */
+    pb.set_input_sizes(digest_len);
+
+    crh.generate_r1cs_constraints();
+    path_var.generate_r1cs_constraints();
+    ml.generate_r1cs_constraints();
+
+
+    return pb;
+}
+
+
 
 template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
+
+    AuthCircuit<FieldT, HashT, ppT> auth_circuit("Authentication");
 
     const size_t digest_len = HashT::get_digest_len();
 
@@ -57,9 +93,12 @@ void proof_auth()
     protoboard<FieldT> pb;
 
     
-    /* Inputs */
+    /* Public Inputs */
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
-    // block_variable<FieldT> input(pb, SHA256_block_size, "input");
+
+
+    /* Private Inputs */
+    block_variable<FieldT> input(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
 
     /* Building the MHT */
     const size_t tree_depth = 2;
@@ -71,17 +110,50 @@ void proof_auth()
     merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
 
     /* Build CRH to get commitment cm */
-    // digest_variable<FieldT> cm(pb, SHA256_digest_size, "cm");
-    // sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
+    digest_variable<FieldT> cm(pb, SHA256_digest_size, "cm");
+    sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
 
     pb.set_input_sizes(digest_len);
-    /* prepare test */
+    
+
+    crh.generate_r1cs_constraints();
+    path_var.generate_r1cs_constraints();
+    ml.generate_r1cs_constraints();
+
+    /* Functional Make a Protoboard */
+    // protoboard<FieldT> pb = setup_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT>, libff::bn128_pp>();
+
+    const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
+    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
+
+
+     const size_t num_constraints = pb.num_constraints();
+    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth)
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size);
+    assert(num_constraints == expected_constraints);
+
+    if (num_constraints != expected_constraints){
+        std::cerr <<  "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
+        return;
+    }
+
+
+    // /* prepare test */
 
     std::vector<merkle_authentication_node> path(tree_depth);
 
-    libff::bit_vector prev_hash(digest_len);
-    std::generate(prev_hash.begin(), prev_hash.end(), [&]() { return std::rand() % 2; });
-    libff::bit_vector leaf = prev_hash;
+    
+    /* Generating random input */
+    // In actual implementation it should be generated secretly and passed by the user.    
+    libff::bit_vector input_bits(SHA256_block_size);
+    std::generate(input_bits.begin(), input_bits.end(), [&]() { return std::rand() % 2; });
+    libff::bit_vector leaf = HashT::get_hash(input_bits);
+
+
+    libff::bit_vector prev_hash = leaf;
+
+    // std::generate(prev_hash.begin(), prev_hash.end(), [&]() { return std::rand() % 2; });
+    // libff::bit_vector leaf = prev_hash;
 
     libff::bit_vector address_bits;
 
@@ -106,18 +178,17 @@ void proof_auth()
 
 
 
-    
-   
-    path_var.generate_r1cs_constraints();
-    ml.generate_r1cs_constraints();
-    // crh.generate_r1cs_constraints();
+
 
     root_digest.generate_r1cs_witness(root);
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
     leaf_digest.generate_r1cs_witness(leaf);
+    input.generate_r1cs_witness(input_bits);
+
     path_var.generate_r1cs_witness(address, path);
     ml.generate_r1cs_witness();
+    crh.generate_r1cs_witness();
 
     
     
@@ -126,17 +197,13 @@ void proof_auth()
     address_bits_va.fill_with_bits(pb, address_bits);
     leaf_digest.generate_r1cs_witness(leaf);
     root_digest.generate_r1cs_witness(root);
+    input.generate_r1cs_witness(input_bits);
     assert(pb.is_satisfied());
 
-    const size_t num_constraints = pb.num_constraints();
-    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth);
-    assert(num_constraints == expected_constraints);
+   
 
 
-
-    const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
-
+    
 
     libff::print_header("Preprocess verification key");
     r1cs_ppzksnark_processed_verification_key<ppT> pvk = r1cs_ppzksnark_verifier_process_vk<ppT>(keypair.vk);
@@ -155,12 +222,12 @@ void proof_auth()
     std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
     std::cout << "Primary (public) input: " << pb.primary_input() << std::endl;
     // std::cout << "num_inputs: " << pb.num_inputs() << std::endl;
-    std::cout << "root: ";
-    for(int i = 0; i < digest_len; i++){
-        std::cout  << root[i] ;
-    }
+    // std::cout << "root: ";
+    // for(int i = 0; i < digest_len; i++){
+    //     std::cout  << root[i] ;
+    // }
     
-    std::cout << "Auxiliary (private) input: " << pb.auxiliary_input() << std::endl;
+    // std::cout << "Auxiliary (private) input: " << pb.auxiliary_input() << std::endl;
     std::cout << "Verification status: " << verified << std::endl;
 
     std::cout << "address: " << address << std::endl;
