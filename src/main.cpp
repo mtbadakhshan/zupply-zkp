@@ -87,9 +87,9 @@ void proof_auth()
 
 
     // const size_t digest_len = HashT::get_digest_len();
-    const size_t tree_depth = 2;
+    const size_t tree_depth = 20;
 
-    AuthCircuit<FieldT, HashT, ppT> auth_circuit("Authentication", tree_depth);
+    AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
 
     /* Make a Protoboard */
     // protoboard<FieldT> pb;
@@ -209,18 +209,18 @@ void proof_auth()
 
     libff::print_header("Preprocess verification key");
     r1cs_ppzksnark_processed_verification_key<ppT> pvk = r1cs_ppzksnark_verifier_process_vk<ppT>(
-                                                                        auth_circuit.get_keypair().vk);
+                                                                        circuit.get_keypair().vk);
 
 
     printf("Generating proof:!\n");
-    const r1cs_ppzksnark_proof<ppT> proof = r1cs_ppzksnark_prover<ppT>(auth_circuit.get_keypair().pk,
-                                                                        auth_circuit.get_primary_input(),
-                                                                        auth_circuit.get_auxiliary_input());
+    const r1cs_ppzksnark_proof<ppT> proof = r1cs_ppzksnark_prover<ppT>(circuit.get_keypair().pk,
+                                                                        circuit.get_primary_input(),
+                                                                        circuit.get_auxiliary_input());
 
 
     printf("Verifing:!\n");
-    bool verified = r1cs_ppzksnark_verifier_strong_IC<ppT>(auth_circuit.get_keypair().vk, 
-                                                                        auth_circuit.get_primary_input(), 
+    bool verified = r1cs_ppzksnark_verifier_strong_IC<ppT>(circuit.get_keypair().vk, 
+                                                                        circuit.get_primary_input(), 
                                                                         proof);
 
     std::cout << "FOR SUCCESSFUL VERIFICATION" << std::endl;

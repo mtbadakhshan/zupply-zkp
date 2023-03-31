@@ -60,5 +60,35 @@ class AuthCircuit : public Circuit<FieldT, HashT, ppT>
 
 	};
 
+
+template<typename FieldT, typename HashT, typename ppT>
+class TransCircuit : public Circuit<FieldT, HashT, ppT>
+	{
+	public:
+		TransCircuit(const std::string& name, const size_t tree_depth);
+		void setup (libff::bit_vector root,
+                    libff::bit_vector cm_new,
+                    libff::bit_vector eol_old,
+                    libff::bit_vector input_bits_old,
+                    libff::bit_vector input_bits_new,
+                    libff::bit_vector address_bits,
+                    size_t address,
+                    std::vector<merkle_authentication_node> path);
+
+		void generate_random_inputs (
+                    libff::bit_vector &root,
+                    libff::bit_vector &cm_new,
+                    libff::bit_vector &eol_old,
+                    libff::bit_vector &input_bits_old,
+                    libff::bit_vector &input_bits_new,
+                    libff::bit_vector &address_bits,
+                    size_t &address,
+                    std::vector<merkle_authentication_node> &path);
+
+	protected:
+		const size_t tree_depth;
+
+	};
+
 #include "circuit.tcc"
 #endif
