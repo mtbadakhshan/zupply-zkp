@@ -11,6 +11,10 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
 
     std::cout<< "/* --- AuthCircuit --- */" << std::endl;
 
+    const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
+
     libff::bit_vector input_bits(HashT::get_block_len());
     libff::bit_vector root(HashT::get_digest_len());
     libff::bit_vector address_bits;
@@ -18,13 +22,27 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
     std::vector<merkle_authentication_node> path(tree_depth);
 
     generate_random_inputs(input_bits, root, address_bits, address, path);
-    setup(input_bits, root, address_bits, address, path);
 
+    // setup(input_bits, root, address_bits, address, path);
+
+    libff::bit_vector q_input_bits(input_bits.begin() , input_bits.begin() + q_len );
+    libff::bit_vector PKsig_input_bits(input_bits.begin() + q_len, input_bits.begin() + q_len + PKsig_len );
+    libff::bit_vector rho_input_bits(input_bits.begin() + q_len + PKsig_len, input_bits.begin() + q_len + PKsig_len + rho_len );
+
+    std::cout << "input_bits.size() : " << input_bits.size() << std::endl;
+    std::cout << "q_input_bits.size() : " << q_input_bits.size() << std::endl;
+    std::cout << "PKsig_input_bits.size() : " << PKsig_input_bits.size() << std::endl;
+    std::cout << "rho_input_bits.size() : " << rho_input_bits.size() << std::endl; 
+
+    setup(q_input_bits, PKsig_input_bits, rho_input_bits, root, address_bits, address, path);
 }
 
 /* --- SETUP --- */
 template<typename FieldT, typename HashT, typename ppT>
-void AuthCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector input_bits,
+void AuthCircuit<FieldT, HashT, ppT>::setup(
+                    libff::bit_vector q_input_bits,
+                    libff::bit_vector PKsig_input_bits,
+                    libff::bit_vector rho_input_bits,
                     libff::bit_vector root,
                     libff::bit_vector address_bits,
                     size_t address,
@@ -33,6 +51,9 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector input_bits,
 
     std::cout<< "/* --- SETUP --- */" << std::endl;
     const size_t digest_len = HashT::get_digest_len();
+    const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
      
     /* Make a Protoboard */
     protoboard<FieldT> pb;
@@ -41,7 +62,24 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector input_bits,
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
 
     /* Private Inputs */
-    block_variable<FieldT> input(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
+    pb_variable_array<FieldT> q_input;
+    q_input.allocate(pb, q_len, "q_input");
+    // ---
+    pb_variable_array<FieldT> PKsig_input;
+    PKsig_input.allocate(pb, PKsig_len, "PKsig_input");
+    // ---
+    pb_variable_array<FieldT> rho_input;
+    rho_input.allocate(pb, rho_len, "rho_input");
+
+    std::vector<pb_variable_array<FieldT> > input_parts;
+    input_parts.push_back(q_input);
+    input_parts.push_back(PKsig_input);
+    input_parts.push_back(rho_input);
+
+    // block_variable<FieldT> input(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
+    block_variable<FieldT> input(pb, input_parts, "input"); //It's "q", "PK_sig", rho
+
+
 
     /* Building the MHT */
     pb_variable_array<FieldT> address_bits_va;
@@ -89,12 +127,26 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector input_bits,
 
     /* Witness Generation according to the function's input parameters */
 
+    libff::bit_vector input_bits(q_input_bits);
+    // input_bits.insert(input_bits.end(), q_input_bits.begin(), q_input_bits.end());
+    input_bits.insert(input_bits.end(), PKsig_input_bits.begin(), PKsig_input_bits.end());
+    input_bits.insert(input_bits.end(), rho_input_bits.begin(), rho_input_bits.end());
+
+    std::cout << "input_bits.size() : " << input_bits.size() << std::endl;
+
+
     libff::bit_vector leaf = HashT::get_hash(input_bits);
 
     root_digest.generate_r1cs_witness(root);
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
     leaf_digest.generate_r1cs_witness(leaf);
+
+    
+    q_input.fill_with_bits(pb, q_input_bits);
+    PKsig_input.fill_with_bits(pb, PKsig_input_bits);
+    rho_input.fill_with_bits(pb, rho_input_bits);
+
     input.generate_r1cs_witness(input_bits);
 
     path_var.generate_r1cs_witness(address, path);
@@ -106,6 +158,7 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector input_bits,
     address_bits_va.fill_with_bits(pb, address_bits);
     leaf_digest.generate_r1cs_witness(leaf);
     root_digest.generate_r1cs_witness(root);
+  
     input.generate_r1cs_witness(input_bits);
     assert(pb.is_satisfied());
 
@@ -188,6 +241,9 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
     std::cout<< "/* --- SETUP --- */" << std::endl;
     const size_t digest_len = HashT::get_digest_len();
+    const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
     // const size_t block_len = HashT::get_block_len();
      
     /* Make a Protoboard */
@@ -200,8 +256,29 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
 
     /* Private Inputs */
-    block_variable<FieldT> input_old(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
-    block_variable<FieldT> input_new(pb, SHA256_block_size, "input"); //It's "q", "PK_sig", rho
+    // old cm inputs
+    pb_variable_array<FieldT> q_input_old();
+    q_input_old.allocate(pb, q_len, "q_input_old");
+    // ---
+    pb_variable_array<FieldT> PKsig_input_old();
+    PKsig_input_old.allocate(pb, PKsig_len, "PKsig_input_old");
+    // ---
+    pb_variable_array<FieldT> rho_input_old();
+    rho_input_old.allocate(pb, rho_len, "rho_input_old");
+
+    // new cm inputs
+    pb_variable_array<FieldT> q_input_new();
+    q_input_new.allocate(pb, q_len, "q_input_new");
+    // ---
+    pb_variable_array<FieldT> PKsig_input_new();
+    PKsig_input_new.allocate(pb, PKsig_len, "PKsig_input_new");
+    // ---
+    pb_variable_array<FieldT> rho_input_new();
+    rho_input_new.allocate(pb, rho_len, "rho_input_new");
+
+
+    block_variable<FieldT> input_old(pb, SHA256_block_size, "input_old"); //It's "q", "PK_sig", rho
+    block_variable<FieldT> input_new(pb, SHA256_block_size, "input_new"); //It's "q", "PK_sig", rho
 
     /* Building the MHT */
     pb_variable_array<FieldT> address_bits_va;
@@ -215,7 +292,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     /* Building CRH to get commitment  old cm */
     sha256_two_to_one_hash_gadget<FieldT> crh_old(pb, SHA256_block_size, input_old, leaf_digest, "crh_old");
     sha256_two_to_one_hash_gadget<FieldT> crh_new(pb, SHA256_block_size, input_new, cm_new_digest, "crh_new");
-    sha256_two_to_one_hash_gadget<FieldT> crh_eol_old(pb, SHA256_block_size, input_new, eol_old_digest, "crh_eol_old");
+    sha256_two_to_one_hash_gadget<FieldT> crh_eol_old(pb, SHA256_block_size, input_old, eol_old_digest, "crh_eol_old");
 
 
 
@@ -250,33 +327,33 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
         return;
     }
 
-    std::cout<< "/* --- Witness Generation --- */" << std::endl;
+    // std::cout<< "/* --- Witness Generation --- */" << std::endl;
 
-    /* Witness Generation according to the function's input parameters */
+    // /* Witness Generation according to the function's input parameters */
 
-    libff::bit_vector leaf = HashT::get_hash(input_bits);
+    // libff::bit_vector leaf = HashT::get_hash(input_bits);
 
-    root_digest.generate_r1cs_witness(root);
-    address_bits_va.fill_with_bits(pb, address_bits);
-    assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
-    leaf_digest.generate_r1cs_witness(leaf);
-    input.generate_r1cs_witness(input_bits);
+    // root_digest.generate_r1cs_witness(root);
+    // address_bits_va.fill_with_bits(pb, address_bits);
+    // assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
+    // leaf_digest.generate_r1cs_witness(leaf);
+    // input.generate_r1cs_witness(input_bits);
 
-    path_var.generate_r1cs_witness(address, path);
-    ml.generate_r1cs_witness();
-    crh.generate_r1cs_witness();
+    // path_var.generate_r1cs_witness(address, path);
+    // ml.generate_r1cs_witness();
+    // crh.generate_r1cs_witness();
     
 
-    /* make sure that read checker didn't accidentally overwrite anything */
-    address_bits_va.fill_with_bits(pb, address_bits);
-    leaf_digest.generate_r1cs_witness(leaf);
-    root_digest.generate_r1cs_witness(root);
-    input.generate_r1cs_witness(input_bits);
-    assert(pb.is_satisfied());
+    // /* make sure that read checker didn't accidentally overwrite anything */
+    // address_bits_va.fill_with_bits(pb, address_bits);
+    // leaf_digest.generate_r1cs_witness(leaf);
+    // root_digest.generate_r1cs_witness(root);
+    // input.generate_r1cs_witness(input_bits);
+    // assert(pb.is_satisfied());
 
 
-    this->primary_input = pb.primary_input();
-    this->auxiliary_input = pb.auxiliary_input();
+    // this->primary_input = pb.primary_input();
+    // this->auxiliary_input = pb.auxiliary_input();
 }
 
 /* --- GENERATE RANDOM INPUTS --- */

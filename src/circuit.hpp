@@ -43,11 +43,19 @@ class AuthCircuit : public Circuit<FieldT, HashT, ppT>
 	{
 	public:
 		AuthCircuit(const std::string& name, const size_t tree_depth);
-		void setup (libff::bit_vector input_bits,
-					libff::bit_vector root,
-					libff::bit_vector address_bits,
-					size_t address,
-					std::vector<merkle_authentication_node> path);
+		// void setup (libff::bit_vector input_bits,
+		// 			libff::bit_vector root,
+		// 			libff::bit_vector address_bits,
+		// 			size_t address,
+		// 			std::vector<merkle_authentication_node> path);
+
+		void setup( libff::bit_vector q_input_bits,
+                    libff::bit_vector PKsig_input_bits,
+                    libff::bit_vector rho_input_bits,
+                    libff::bit_vector root,
+                    libff::bit_vector address_bits,
+                    size_t address,
+                    std::vector<merkle_authentication_node> path);
 
 		void generate_random_inputs (libff::bit_vector &input_bits,
 					libff::bit_vector &root,
