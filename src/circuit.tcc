@@ -23,16 +23,9 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
 
     generate_random_inputs(input_bits, root, address_bits, address, path);
 
-    // setup(input_bits, root, address_bits, address, path);
-
     libff::bit_vector q_input_bits(input_bits.begin() , input_bits.begin() + q_len );
     libff::bit_vector PKsig_input_bits(input_bits.begin() + q_len, input_bits.begin() + q_len + PKsig_len );
     libff::bit_vector rho_input_bits(input_bits.begin() + q_len + PKsig_len, input_bits.begin() + q_len + PKsig_len + rho_len );
-
-    std::cout << "input_bits.size() : " << input_bits.size() << std::endl;
-    std::cout << "q_input_bits.size() : " << q_input_bits.size() << std::endl;
-    std::cout << "PKsig_input_bits.size() : " << PKsig_input_bits.size() << std::endl;
-    std::cout << "rho_input_bits.size() : " << rho_input_bits.size() << std::endl; 
 
     setup(q_input_bits, PKsig_input_bits, rho_input_bits, root, address_bits, address, path);
 }
@@ -223,6 +216,16 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
     std::vector<merkle_authentication_node> path(tree_depth);
 
     generate_random_inputs(root, cm_new, eol_old, input_bits_old, input_bits_new, address_bits, address, path);
+    
+    libff::bit_vector q_input_bits_old(input_bits_old.begin() , input_bits_old.begin() + q_len );
+    libff::bit_vector PKsig_input_bits_old(input_bits_old.begin() + q_len, input_bits_old.begin() + q_len + PKsig_len );
+    libff::bit_vector rho_input_bits_old(input_bits_old.begin() + q_len + PKsig_len, input_bits_old.begin() + q_len + PKsig_len + rho_len );
+
+    libff::bit_vector q_input_bits_new(input_bits_new.begin() , input_bits_new.begin() + q_len );
+    libff::bit_vector PKsig_input_bits_new(input_bits_new.begin() + q_len, input_bits_new.begin() + q_len + PKsig_len );
+    libff::bit_vector rho_input_bits_new(input_bits_new.begin() + q_len + PKsig_len, input_bits_new.begin() + q_len + PKsig_len + rho_len );
+
+
     // setup(input_bits, root, address_bits, address, path);
 
 }
@@ -232,8 +235,12 @@ template<typename FieldT, typename HashT, typename ppT>
 void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
                     libff::bit_vector cm_new,
                     libff::bit_vector eol_old,
-                    libff::bit_vector input_bits_old,
-                    libff::bit_vector input_bits_new,
+                    libff::bit_vector q_input_bits_old,
+                    libff::bit_vector PKsig_input_bits_old,
+                    libff::bit_vector rho_input_bits_old,
+                    libff::bit_vector q_input_bits_new,
+                    libff::bit_vector PKsig_input_bits_new,
+                    libff::bit_vector rho_input_bits_new,
                     libff::bit_vector address_bits,
                     size_t address,
                     std::vector<merkle_authentication_node> path)
@@ -266,6 +273,11 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     pb_variable_array<FieldT> rho_input_old();
     rho_input_old.allocate(pb, rho_len, "rho_input_old");
 
+    std::vector<pb_variable_array<FieldT> > input_old_parts;
+    input_old_parts.push_back(q_input_old);
+    input_old_parts.push_back(PKsig_input_old);
+    input_old_parts.push_back(rho_input_old);
+
     // new cm inputs
     pb_variable_array<FieldT> q_input_new();
     q_input_new.allocate(pb, q_len, "q_input_new");
@@ -276,9 +288,14 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     pb_variable_array<FieldT> rho_input_new();
     rho_input_new.allocate(pb, rho_len, "rho_input_new");
 
+    std::vector<pb_variable_array<FieldT> > input_new_parts;
+    input_new_parts.push_back(q_new_old);
+    input_new_parts.push_back(PKsig_new_old);
+    input_new_parts.push_back(rho_new_old);
 
-    block_variable<FieldT> input_old(pb, SHA256_block_size, "input_old"); //It's "q", "PK_sig", rho
-    block_variable<FieldT> input_new(pb, SHA256_block_size, "input_new"); //It's "q", "PK_sig", rho
+
+    block_variable<FieldT> input_old(pb, input_old_parts, "input_old"); //It's "q", "PK_sig", rho
+    block_variable<FieldT> input_new(pb, input_new_parts, "input_new"); //It's "q", "PK_sig", rho
 
     /* Building the MHT */
     pb_variable_array<FieldT> address_bits_va;
