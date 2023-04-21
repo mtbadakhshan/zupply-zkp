@@ -203,6 +203,10 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
 
     std::cout<< "/* --- TransCircuit --- */" << std::endl;
 
+    const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
+
     // public inputs
     libff::bit_vector root(HashT::get_digest_len());
     libff::bit_vector cm_new(HashT::get_digest_len());
@@ -289,9 +293,9 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     rho_input_new.allocate(pb, rho_len, "rho_input_new");
 
     std::vector<pb_variable_array<FieldT> > input_new_parts;
-    input_new_parts.push_back(q_new_old);
-    input_new_parts.push_back(PKsig_new_old);
-    input_new_parts.push_back(rho_new_old);
+    input_new_parts.push_back(q_input_new);
+    input_new_parts.push_back(PKsig_input_new);
+    input_new_parts.push_back(rho_input_new);
 
 
     block_variable<FieldT> input_old(pb, input_old_parts, "input_old"); //It's "q", "PK_sig", rho
