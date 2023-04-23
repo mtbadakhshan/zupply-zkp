@@ -21,6 +21,34 @@
 
 using namespace libsnark;
 
+
+template<typename FieldT>
+class is_equal_gadget : public gadget<FieldT> {
+public:
+    pb_variable_array<FieldT> a;
+    pb_variable_array<FieldT> b;
+
+    is_equal_gadget(protoboard<FieldT>& pb,
+            const pb_variable_array<FieldT>& a_,
+            const pb_variable_array<FieldT>& b_,
+            const std::string& annotation_prefix = "")
+        : gadget<FieldT>(pb, annotation_prefix), a(a_), b(b_)
+    {
+        assert(a.size() == b.size());
+    }
+
+    void generate_r1cs_constraints() {
+        for (size_t i = 0; i < a.size(); ++i) {
+            this->pb.add_r1cs_constraint(
+                linear_combination<FieldT>({a[i], FieldT::one()}),
+                linear_combination<FieldT>({b[i], FieldT::one()}),
+                linear_combination<FieldT>()
+            );
+        }
+    }
+};
+
+
 template<typename FieldT, typename HashT, typename ppT>
 class Circuit
 	{

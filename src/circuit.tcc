@@ -125,7 +125,6 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     input_bits.insert(input_bits.end(), PKsig_input_bits.begin(), PKsig_input_bits.end());
     input_bits.insert(input_bits.end(), rho_input_bits.begin(), rho_input_bits.end());
 
-    std::cout << "input_bits.size() : " << input_bits.size() << std::endl;
 
 
     libff::bit_vector leaf = HashT::get_hash(input_bits);
@@ -298,22 +297,34 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     input_new_parts.push_back(rho_input_new);
 
 
-    block_variable<FieldT> input_old(pb, input_old_parts, "input_old"); //It's "q", "PK_sig", rho
-    block_variable<FieldT> input_new(pb, input_new_parts, "input_new"); //It's "q", "PK_sig", rho
+    pb_variable_array<FieldT> zero_padding_rho();
+    zero_padding_rho.allocate(pb, SHA256_block_size - rho_len, "rho_input_new");
+
+    std::vector<pb_variable_array<FieldT> > input_for_eol_crh_parts;
+    input_for_eol_crh_parts.push_back(zero_padding_rho);
+    input_for_eol_crh_parts.push_back(rho_input_old);
+
+
+    block_variable<FieldT> input_old(pb, input_old_parts, "input_old"); //It's "q", "PK_sig", "rho"
+    block_variable<FieldT> input_new(pb, input_new_parts, "input_new"); //It's "q", "PK_sig", "rho"
+    block_variable<FieldT> input_for_eol_crh(pb, input_for_eol_crh_parts, "input_for_eol_crh"); //It's "0000...0000", "rho"
+
+
+    /* Building the comparator */
+    // q_input_old == q_input_new
+    is_equal_gadget<FieldT> comparator(pb, q_input_old, q_input_new, "comparator");
 
     /* Building the MHT */
     pb_variable_array<FieldT> address_bits_va;
     address_bits_va.allocate(pb, tree_depth, "address_bits");
-
     digest_variable<FieldT> leaf_digest(pb, digest_len, "input_block");
-
     merkle_authentication_path_variable<FieldT, HashT> path_var(pb, tree_depth, "path_var");
     merkle_tree_check_read_gadget<FieldT, HashT> ml(pb, tree_depth, address_bits_va, leaf_digest, root_digest, path_var, ONE, "ml");
 
     /* Building CRH to get commitment  old cm */
     sha256_two_to_one_hash_gadget<FieldT> crh_old(pb, SHA256_block_size, input_old, leaf_digest, "crh_old");
     sha256_two_to_one_hash_gadget<FieldT> crh_new(pb, SHA256_block_size, input_new, cm_new_digest, "crh_new");
-    sha256_two_to_one_hash_gadget<FieldT> crh_eol_old(pb, SHA256_block_size, input_old, eol_old_digest, "crh_eol_old");
+    sha256_two_to_one_hash_gadget<FieldT> crh_eol_old(pb, SHA256_block_size, input_for_eol_crh, eol_old_digest, "crh_eol_old");
 
 
 
@@ -324,9 +335,11 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
     std::cout<< "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
     /* Trusted Setup : Generating the CRS (keypar) */
- 
+    
+    comparator.generate_r1cs_constraints();
     crh_old.generate_r1cs_constraints();
     crh_new.generate_r1cs_constraints();
+    crh_eol_old.generate_r1cs_constraints();
     path_var.generate_r1cs_constraints();
     ml.generate_r1cs_constraints();
 
@@ -348,17 +361,30 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
         return;
     }
 
-    // std::cout<< "/* --- Witness Generation --- */" << std::endl;
+    std::cout<< "/* --- Witness Generation --- */" << std::endl;
 
     // /* Witness Generation according to the function's input parameters */
 
-    // libff::bit_vector leaf = HashT::get_hash(input_bits);
+    libff::bit_vector input_bits_old(q_input_bits_old);
+    input_bits_old.insert(input_bits_old.end(), PKsig_input_bits_old.begin(), PKsig_input_bits_old.end());
+    input_bits_old.insert(input_bits_old.end(), rho_input_bits_old.begin(), rho_input_bits_old.end());
 
-    // root_digest.generate_r1cs_witness(root);
-    // address_bits_va.fill_with_bits(pb, address_bits);
-    // assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
-    // leaf_digest.generate_r1cs_witness(leaf);
-    // input.generate_r1cs_witness(input_bits);
+    libff::bit_vector input_bits_new(q_input_bits_new);
+    input_bits_new.insert(input_bits_new.end(), PKsig_input_bits_new.begin(), PKsig_input_bits_new.end());
+    input_bits_new.insert(input_bits_new.end(), rho_input_bits_new.begin(), rho_input_bits_new.end());
+
+    libff::bit_vector input_bits_for_eol_crh()
+
+
+
+    libff::bit_vector leaf_cm_old = HashT::get_hash(input_bits_old);
+
+    root_digest.generate_r1cs_witness(root);
+    address_bits_va.fill_with_bits(pb, address_bits);
+    assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
+    leaf_digest.generate_r1cs_witness(leaf_cm_old);
+    input_old.generate_r1cs_witness(input_bits_old);
+    input_new.generate_r1cs_witness(input_bits_new);
 
     // path_var.generate_r1cs_witness(address, path);
     // ml.generate_r1cs_witness();
