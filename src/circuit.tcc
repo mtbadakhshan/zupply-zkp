@@ -229,8 +229,9 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
     libff::bit_vector rho_input_bits_new(input_bits_new.begin() + q_len + PKsig_len, input_bits_new.begin() + q_len + PKsig_len + rho_len );
 
 
-    // setup(input_bits, root, address_bits, address, path);
-
+    setup(root, cm_new, eol_old, q_input_bits_old, PKsig_input_bits_old,
+          rho_input_bits_old, q_input_bits_new, PKsig_input_bits_new,
+          rho_input_bits_new, address_bits, address, path);
 }
 
 /* --- SETUP --- */
@@ -267,13 +268,13 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
     /* Private Inputs */
     // old cm inputs
-    pb_variable_array<FieldT> q_input_old();
+    pb_variable_array<FieldT> q_input_old;
     q_input_old.allocate(pb, q_len, "q_input_old");
     // ---
-    pb_variable_array<FieldT> PKsig_input_old();
+    pb_variable_array<FieldT> PKsig_input_old;
     PKsig_input_old.allocate(pb, PKsig_len, "PKsig_input_old");
     // ---
-    pb_variable_array<FieldT> rho_input_old();
+    pb_variable_array<FieldT> rho_input_old;
     rho_input_old.allocate(pb, rho_len, "rho_input_old");
 
     std::vector<pb_variable_array<FieldT> > input_old_parts;
@@ -282,13 +283,13 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     input_old_parts.push_back(rho_input_old);
 
     // new cm inputs
-    pb_variable_array<FieldT> q_input_new();
+    pb_variable_array<FieldT> q_input_new;
     q_input_new.allocate(pb, q_len, "q_input_new");
     // ---
-    pb_variable_array<FieldT> PKsig_input_new();
+    pb_variable_array<FieldT> PKsig_input_new;
     PKsig_input_new.allocate(pb, PKsig_len, "PKsig_input_new");
     // ---
-    pb_variable_array<FieldT> rho_input_new();
+    pb_variable_array<FieldT> rho_input_new;
     rho_input_new.allocate(pb, rho_len, "rho_input_new");
 
     std::vector<pb_variable_array<FieldT> > input_new_parts;
@@ -297,7 +298,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     input_new_parts.push_back(rho_input_new);
 
 
-    pb_variable_array<FieldT> zero_padding_rho();
+    pb_variable_array<FieldT> zero_padding_rho;
     zero_padding_rho.allocate(pb, SHA256_block_size - rho_len, "rho_input_new");
 
     std::vector<pb_variable_array<FieldT> > input_for_eol_crh_parts;
@@ -324,7 +325,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     /* Building CRH to get commitment  old cm */
     sha256_two_to_one_hash_gadget<FieldT> crh_old(pb, SHA256_block_size, input_old, leaf_digest, "crh_old");
     sha256_two_to_one_hash_gadget<FieldT> crh_new(pb, SHA256_block_size, input_new, cm_new_digest, "crh_new");
-    sha256_two_to_one_hash_gadget<FieldT> crh_eol_old(pb, SHA256_block_size, input_for_eol_crh, eol_old_digest, "crh_eol_old");
+    sha256_two_to_one_hash_gadget<FieldT> crh_eol(pb, SHA256_block_size, input_for_eol_crh, eol_old_digest, "crh_eol_old");
 
 
 
@@ -339,7 +340,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     comparator.generate_r1cs_constraints();
     crh_old.generate_r1cs_constraints();
     crh_new.generate_r1cs_constraints();
-    crh_eol_old.generate_r1cs_constraints();
+    crh_eol.generate_r1cs_constraints();
     path_var.generate_r1cs_constraints();
     ml.generate_r1cs_constraints();
 
@@ -353,7 +354,10 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
     const size_t num_constraints = pb.num_constraints();
     const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth)
-                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size);
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
+                                            + 64; // for the comparison
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints){
@@ -365,6 +369,15 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
 
     // /* Witness Generation according to the function's input parameters */
 
+    q_input_old.fill_with_bits(pb, q_input_bits_old);
+    PKsig_input_old.fill_with_bits(pb, PKsig_input_bits_old);
+    rho_input_old.fill_with_bits(pb, rho_input_bits_old);
+
+    q_input_new.fill_with_bits(pb, q_input_bits_new);
+    PKsig_input_new.fill_with_bits(pb, PKsig_input_bits_new);
+    rho_input_new.fill_with_bits(pb, rho_input_bits_new);
+
+
     libff::bit_vector input_bits_old(q_input_bits_old);
     input_bits_old.insert(input_bits_old.end(), PKsig_input_bits_old.begin(), PKsig_input_bits_old.end());
     input_bits_old.insert(input_bits_old.end(), rho_input_bits_old.begin(), rho_input_bits_old.end());
@@ -373,34 +386,50 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     input_bits_new.insert(input_bits_new.end(), PKsig_input_bits_new.begin(), PKsig_input_bits_new.end());
     input_bits_new.insert(input_bits_new.end(), rho_input_bits_new.begin(), rho_input_bits_new.end());
 
-    libff::bit_vector input_bits_for_eol_crh()
+    libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
+    libff::bit_vector input_for_eol_crh_bits(zero_padding_rho_bits);
+    input_for_eol_crh_bits.insert(input_for_eol_crh_bits.end(), rho_input_bits_old.begin(), rho_input_bits_old.end());
 
 
-
-    libff::bit_vector leaf_cm_old = HashT::get_hash(input_bits_old);
+    libff::bit_vector leaf_cm_old_bits = HashT::get_hash(input_bits_old);
 
     root_digest.generate_r1cs_witness(root);
+    cm_new_digest.generate_r1cs_witness(cm_new);
+    eol_old_digest.generate_r1cs_witness(eol_old);
+
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);
-    leaf_digest.generate_r1cs_witness(leaf_cm_old);
+    leaf_digest.generate_r1cs_witness(leaf_cm_old_bits);
     input_old.generate_r1cs_witness(input_bits_old);
     input_new.generate_r1cs_witness(input_bits_new);
+    input_for_eol_crh.generate_r1cs_witness(input_for_eol_crh_bits);
 
-    // path_var.generate_r1cs_witness(address, path);
-    // ml.generate_r1cs_witness();
-    // crh.generate_r1cs_witness();
+    path_var.generate_r1cs_witness(address, path);
+    ml.generate_r1cs_witness();
+    crh_old.generate_r1cs_witness();
+    crh_new.generate_r1cs_witness();
+    crh_eol.generate_r1cs_witness();
+
     
 
     // /* make sure that read checker didn't accidentally overwrite anything */
-    // address_bits_va.fill_with_bits(pb, address_bits);
-    // leaf_digest.generate_r1cs_witness(leaf);
-    // root_digest.generate_r1cs_witness(root);
-    // input.generate_r1cs_witness(input_bits);
-    // assert(pb.is_satisfied());
+    address_bits_va.fill_with_bits(pb, address_bits);
+    leaf_digest.generate_r1cs_witness(leaf_cm_old_bits);
+    root_digest.generate_r1cs_witness(root);
+    input_old.generate_r1cs_witness(input_bits_old);
+    input_new.generate_r1cs_witness(input_bits_new);
+    input_for_eol_crh.generate_r1cs_witness(input_for_eol_crh_bits);
+
+    assert(pb.is_satisfied());
+
+    if (!pb.is_satisfied()){
+        std::cerr <<  "pb is Not Satisfied" << std::endl;
+        return;
+    }
 
 
-    // this->primary_input = pb.primary_input();
-    // this->auxiliary_input = pb.auxiliary_input();
+    this->primary_input = pb.primary_input();
+    this->auxiliary_input = pb.auxiliary_input();
 }
 
 /* --- GENERATE RANDOM INPUTS --- */
@@ -419,12 +448,14 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs (
     /* Generating random input */
      // In actual implementation it should be generated secretly and passed by the user. 
     const size_t digest_len = HashT::get_digest_len();   
+    const size_t q_len = 64;
+
     std::generate(input_bits_old.begin(), input_bits_old.end(), [&]() { return std::rand() % 2; });
 
     // q (the first 64 bits) should be the same in two inputs
     int i = 0;
-    std::generate(input_bits_new.begin(), input_bits_new.begin() + 63, [&]() { return input_bits_old[i++]; });
-    std::generate(input_bits_new.begin() + 64, input_bits_new.end(), [&]() { return std::rand() % 2; });
+    std::generate(input_bits_new.begin(), input_bits_new.begin() + q_len, [&]() { return input_bits_old[i++]; });
+    std::generate(input_bits_new.begin() + q_len , input_bits_new.end(), [&]() { return std::rand() % 2; });
 
 
     libff::bit_vector leaf = HashT::get_hash(input_bits_old);
@@ -449,8 +480,12 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs (
 
     cm_new =  HashT::get_hash(input_bits_new);
     eol_old =  HashT::get_hash(input_bits_new);
-
 }
+
+
+
+
+
 
 
 

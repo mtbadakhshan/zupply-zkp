@@ -39,14 +39,15 @@ public:
 
     void generate_r1cs_constraints() {
         for (size_t i = 0; i < a.size(); ++i) {
-            this->pb.add_r1cs_constraint(
-                linear_combination<FieldT>({a[i], FieldT::one()}),
-                linear_combination<FieldT>({b[i], FieldT::one()}),
-                linear_combination<FieldT>()
+            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+                linear_combination<FieldT>({a[i]}),
+                linear_combination<FieldT>({FieldT::one()}),
+                linear_combination<FieldT>({b[i]}))
             );
         }
     }
 };
+
 
 
 template<typename FieldT, typename HashT, typename ppT>
@@ -129,6 +130,45 @@ class TransCircuit : public Circuit<FieldT, HashT, ppT>
 		const size_t tree_depth;
 
 	};
+
+template<typename FieldT, typename HashT, typename ppT>
+class MergeCircuit : public Circuit<FieldT, HashT, ppT>
+	{
+	public:
+		MergeCircuit(const std::string& name, const size_t tree_depth);
+		void setup (libff::bit_vector root,
+                    libff::bit_vector cm_new,
+                    libff::bit_vector eol_old_1,
+                    libff::bit_vector q_input_bits_old_1,
+                    libff::bit_vector PKsig_input_bits_old_1,
+                    libff::bit_vector rho_input_bits_old_1,
+                    libff::bit_vector eol_old_2,
+                    libff::bit_vector q_input_bits_old_2,
+                    libff::bit_vector PKsig_input_bits_old_2,
+                    libff::bit_vector rho_input_bits_old_2,
+                    libff::bit_vector q_input_bits_new,
+                    libff::bit_vector PKsig_input_bits_new,
+                    libff::bit_vector rho_input_bits_new,
+                    libff::bit_vector address_bits,
+                    size_t address,
+                    std::vector<merkle_authentication_node> path);
+
+		void generate_random_inputs (
+                    libff::bit_vector &root,
+                    libff::bit_vector &cm_new,
+                    libff::bit_vector &eol_old,
+                    libff::bit_vector &input_bits_old,
+                    libff::bit_vector &input_bits_new,
+                    libff::bit_vector &address_bits,
+                    size_t &address,
+                    std::vector<merkle_authentication_node> &path);
+
+	protected:
+		const size_t tree_depth;
+
+	};
+
+
 
 #include "circuit.tcc"
 #endif

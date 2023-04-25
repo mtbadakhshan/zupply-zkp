@@ -89,7 +89,7 @@ void proof_auth()
     // const size_t digest_len = HashT::get_digest_len();
     const size_t tree_depth = 2;
 
-    AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    TransCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
 
     /* Make a Protoboard */
     // protoboard<FieldT> pb;
