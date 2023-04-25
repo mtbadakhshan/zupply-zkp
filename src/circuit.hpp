@@ -139,29 +139,43 @@ class MergeCircuit : public Circuit<FieldT, HashT, ppT>
 		void setup (libff::bit_vector root,
                     libff::bit_vector cm_new,
                     libff::bit_vector eol_old_1,
+                    libff::bit_vector eol_old_2,
                     libff::bit_vector q_input_bits_old_1,
                     libff::bit_vector PKsig_input_bits_old_1,
                     libff::bit_vector rho_input_bits_old_1,
-                    libff::bit_vector eol_old_2,
                     libff::bit_vector q_input_bits_old_2,
                     libff::bit_vector PKsig_input_bits_old_2,
                     libff::bit_vector rho_input_bits_old_2,
                     libff::bit_vector q_input_bits_new,
                     libff::bit_vector PKsig_input_bits_new,
                     libff::bit_vector rho_input_bits_new,
-                    libff::bit_vector address_bits,
-                    size_t address,
-                    std::vector<merkle_authentication_node> path);
+                    libff::bit_vector address_bits_1,
+                    size_t address_1,
+                    std::vector<merkle_authentication_node> path_1,
+                    libff::bit_vector address_bits_2,
+                    size_t address_2,
+                    std::vector<merkle_authentication_node> path_2);
 
 		void generate_random_inputs (
                     libff::bit_vector &root,
                     libff::bit_vector &cm_new,
-                    libff::bit_vector &eol_old,
-                    libff::bit_vector &input_bits_old,
-                    libff::bit_vector &input_bits_new,
-                    libff::bit_vector &address_bits,
-                    size_t &address,
-                    std::vector<merkle_authentication_node> &path);
+                    libff::bit_vector &eol_old_1,
+                    libff::bit_vector &eol_old_2,
+                    libff::bit_vector &q_input_bits_old_1,
+                    libff::bit_vector &PKsig_input_bits_old_1,
+                    libff::bit_vector &rho_input_bits_old_1,
+                    libff::bit_vector &q_input_bits_old_2,
+                    libff::bit_vector &PKsig_input_bits_old_2,
+                    libff::bit_vector &rho_input_bits_old_2,
+                    libff::bit_vector &q_input_bits_new,
+                    libff::bit_vector &PKsig_input_bits_new,
+                    libff::bit_vector &rho_input_bits_new,
+                    libff::bit_vector &address_bits_1,
+                    size_t &address_1,
+                    std::vector<merkle_authentication_node> &path_1,
+                    libff::bit_vector &address_bits_2,
+                    size_t &address_2,
+                    std::vector<merkle_authentication_node> &path_2);
 
 	protected:
 		const size_t tree_depth;

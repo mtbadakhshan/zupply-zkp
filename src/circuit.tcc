@@ -3,7 +3,10 @@
 
 #include "circuit.hpp"
 
-/* -------- AuthCircuit -------- */
+
+/* ====================================================================================================================== */
+/* -------- AuthCircuit ------------------------------------------------------------------------------------------------- */
+/* ====================================================================================================================== */
 template<typename FieldT, typename HashT, typename ppT>
 AuthCircuit<FieldT, HashT, ppT>::AuthCircuit(const std::string& name, const size_t tree_depth):
 Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
@@ -193,8 +196,9 @@ void AuthCircuit<FieldT, HashT, ppT>::generate_random_inputs (libff::bit_vector 
     root = prev_hash;
 }
 
-
-/* -------- TransCircuit -------- */
+/* ====================================================================================================================== */
+/* -------- TransCircuit ------------------------------------------------------------------------------------------------ */
+/* ====================================================================================================================== */
 template<typename FieldT, typename HashT, typename ppT>
 TransCircuit<FieldT, HashT, ppT>::TransCircuit(const std::string& name, const size_t tree_depth):
 Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
@@ -483,7 +487,135 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs (
 }
 
 
+/* ====================================================================================================================== */
+/* -------- MergeCircuit ------------------------------------------------------------------------------------------------ */
+/* ====================================================================================================================== */
+template<typename FieldT, typename HashT, typename ppT>
+MergeCircuit<FieldT, HashT, ppT>::MergeCircuit(const std::string& name, const size_t tree_depth):
+Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
+{
 
+    std::cout<< "/* --- MergeCircuit --- */" << std::endl;
+
+    const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
+
+    // public inputs
+    libff::bit_vector root(HashT::get_digest_len());
+    libff::bit_vector cm_new(HashT::get_digest_len());
+    libff::bit_vector eol_old_1(HashT::get_digest_len());
+    libff::bit_vector eol_old_2(HashT::get_digest_len());
+
+    // private inputs
+    libff::bit_vector q_input_bits_old_1(q_len);
+    libff::bit_vector PKsig_input_bits_old_1(PKsig_len);
+    libff::bit_vector rho_input_bits_old_1(rho_len);
+
+    libff::bit_vector q_input_bits_old_2(q_len);
+    libff::bit_vector PKsig_input_bits_old_2(PKsig_len);
+    libff::bit_vector rho_input_bits_old_2(rho_len);
+
+    libff::bit_vector q_input_bits_new(q_len);
+    libff::bit_vector PKsig_input_bits_new(PKsig_len);
+    libff::bit_vector rho_input_bits_new(rho_len);
+
+    libff::bit_vector address_bits_1;
+    size_t address_1;
+    std::vector<merkle_authentication_node> path_1(tree_depth);
+
+    libff::bit_vector address_bits_2;
+    size_t address_2;
+    std::vector<merkle_authentication_node> path_2(tree_depth);
+
+    
+    generate_random_inputs( root, cm_new, eol_old_1, eol_old_2, q_input_bits_old_1, PKsig_input_bits_old_1, rho_input_bits_old_1, 
+                            q_input_bits_old_2, PKsig_input_bits_old_2, rho_input_bits_old_2, q_input_bits_new, 
+                            PKsig_input_bits_new, rho_input_bits_new, address_bits_1, address_1, path_1, address_bits_2, 
+                            address_2, path_2);
+
+
+    // setup(  root, cm_new, eol_old_1, eol_old_2, q_input_bits_old_1, PKsig_input_bits_old_1, rho_input_bits_old_1, 
+    //         q_input_bits_old_2, PKsig_input_bits_old_2, rho_input_bits_old_2, q_input_bits_new, 
+    //         PKsig_input_bits_new, rho_input_bits_new, address_bits_1, address_1, path_1, address_bits_2, 
+    //         address_2, path_2);
+}
+
+
+/* --- GENERATE RANDOM INPUTS --- */
+template<typename FieldT, typename HashT, typename ppT>
+void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
+                    libff::bit_vector &root,
+                    libff::bit_vector &cm_new,
+                    libff::bit_vector &eol_old_1,
+                    libff::bit_vector &eol_old_2,
+                    libff::bit_vector &q_input_bits_old_1,
+                    libff::bit_vector &PKsig_input_bits_old_1,
+                    libff::bit_vector &rho_input_bits_old_1,
+                    libff::bit_vector &q_input_bits_old_2,
+                    libff::bit_vector &PKsig_input_bits_old_2,
+                    libff::bit_vector &rho_input_bits_old_2,
+                    libff::bit_vector &q_input_bits_new,
+                    libff::bit_vector &PKsig_input_bits_new,
+                    libff::bit_vector &rho_input_bits_new,
+                    libff::bit_vector &address_bits_1,
+                    size_t &address_1,
+                    std::vector<merkle_authentication_node> &path_1,
+                    libff::bit_vector &address_bits_2,
+                    size_t &address_2,
+                    std::vector<merkle_authentication_node> &path_2)
+{
+    std::cout<< "/* --- GENERATE RANDOM INPUTS --- */" << std::endl;
+    /* Generating random input */
+     // In actual implementation it should be generated secretly and passed by the user. 
+    const size_t digest_len = HashT::get_digest_len();   
+    const size_t q_len = 64;
+
+    q_input_bits_old_1[0] = 0; //To prevent overflow
+    std::generate(q_input_bits_old_1.begin() + 1, q_input_bits_old_1.end(), [&]() { return std::rand() % 2; }); 
+    std::generate(PKsig_input_bits_old_1.begin(), PKsig_input_bits_old_1.end(), [&]() { return std::rand() % 2; });
+    std::generate(rho_input_bits_old_1.begin(), rho_input_bits_old_1.end(), [&]() { return std::rand() % 2; });
+
+    q_input_bits_old_2[0] = 0; //To prevent overflow
+    std::generate(q_input_bits_old_2.begin() + 1, q_input_bits_old_2.end(), [&]() { return std::rand() % 2; });
+    std::generate(PKsig_input_bits_old_2.begin(), PKsig_input_bits_old_2.end(), [&]() { return std::rand() % 2; });
+    std::generate(rho_input_bits_old_2.begin(), rho_input_bits_old_2.end(), [&]() { return std::rand() % 2; });
+
+    std::generate(PKsig_input_bits_new.begin(), PKsig_input_bits_new.end(), [&]() { return std::rand() % 2; });
+    std::generate(rho_input_bits_new.begin(), rho_input_bits_new.end(), [&]() { return std::rand() % 2; });
+
+    // Full Adder : q_input_bits_new = q_input_bits_old_1 + q_input_bits_old_2
+    bool carry_bit = 0; 
+    for (size_t i = q_len - 1; i > 0; i-- ){
+        q_input_bits_new[i] =  (q_input_bits_old_1[i] ^ q_input_bits_old_2[i]) ^ carry_bit;
+        carry_bit = ((q_input_bits_old_1[i] ^ q_input_bits_old_2[i]) & carry_bit) 
+                    | (q_input_bits_old_1[i] & q_input_bits_old_2[i]);
+    }
+    q_input_bits_new[0] = carry_bit;
+
+    // libff::bit_vector leaf = HashT::get_hash(input_bits_old);
+    // libff::bit_vector prev_hash = leaf;
+    // address = 0;
+    // for (long level = tree_depth-1; level >= 0; --level)
+    // {
+    //     const bool computed_is_right = (std::rand() % 2);
+    //     address |= (computed_is_right ? 1ul << (tree_depth-1-level) : 0);
+    //     address_bits.push_back(computed_is_right);
+    //     libff::bit_vector other(digest_len);
+    //     std::generate(other.begin(), other.end(), [&]() { return std::rand() % 2; });
+
+    //     libff::bit_vector block = prev_hash;
+    //     block.insert(computed_is_right ? block.begin() : block.end(), other.begin(), other.end());
+    //     libff::bit_vector h = HashT::get_hash(block);
+
+    //     path[level] = other;
+    //     prev_hash = h;
+    // }
+    // root = prev_hash;
+
+    // cm_new =  HashT::get_hash(input_bits_new);
+    // eol_old =  HashT::get_hash(input_bits_new);
+}
 
 
 
