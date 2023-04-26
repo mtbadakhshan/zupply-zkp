@@ -543,10 +543,10 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
                             address_2, path_2);
 
 
-    // setup(  root, cm_new, eol_old_1, eol_old_2, q_input_bits_old_1, PKsig_input_bits_old_1, rho_input_bits_old_1, 
-    //         q_input_bits_old_2, PKsig_input_bits_old_2, rho_input_bits_old_2, q_input_bits_new, 
-    //         PKsig_input_bits_new, rho_input_bits_new, address_bits_1, address_1, path_1, address_bits_2, 
-    //         address_2, path_2);
+    setup(  root, cm_new, eol_old_1, eol_old_2, q_input_bits_old_1, PKsig_input_bits_old_1, rho_input_bits_old_1, 
+            q_input_bits_old_2, PKsig_input_bits_old_2, rho_input_bits_old_2, q_input_bits_new, 
+            PKsig_input_bits_new, rho_input_bits_new, address_bits_1, address_1, path_1, address_bits_2, 
+            address_2, path_2);
 }
 
 /* --- SETUP --- */
@@ -692,57 +692,72 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     /* Trusted Setup : Generating the CRS (keypar) */
     
     // comparator.generate_r1cs_constraints();
-    // crh_old.generate_r1cs_constraints();
-    // crh_new.generate_r1cs_constraints();
-    // crh_eol.generate_r1cs_constraints();
-    // path_var.generate_r1cs_constraints();
-    // ml.generate_r1cs_constraints();
+    crh_old_1.generate_r1cs_constraints();
+    crh_old_2.generate_r1cs_constraints();
+    crh_new.generate_r1cs_constraints();
+    crh_eol_1.generate_r1cs_constraints();
+    crh_eol_2.generate_r1cs_constraints();
+    path_var_1.generate_r1cs_constraints();
+    path_var_2.generate_r1cs_constraints();
+    ml_1.generate_r1cs_constraints();
+    ml_2.generate_r1cs_constraints();
 
 
-    // const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    // const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
+    const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
+    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
 
     // // Warning: check that the assignment operation is implemented correctly - avoid shallow copy 
-    // this->keypair.pk = keypair.pk;
-    // this->keypair.vk = keypair.vk;
+    this->keypair.pk = keypair.pk;
+    this->keypair.vk = keypair.vk;
 
-    // const size_t num_constraints = pb.num_constraints();
-    // const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth)
-    //                                         + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
-    //                                         + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
-    //                                         + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
-    //                                         + 64; // for the comparison
-    // assert(num_constraints == expected_constraints);
+    const size_t num_constraints = pb.num_constraints();
+    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) * 2
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) * 5
+                                            ; // for the comparison
+    assert(num_constraints == expected_constraints);
 
-    // if (num_constraints != expected_constraints){
-    //     std::cerr <<  "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
-    //     return;
-    // }
+    if (num_constraints != expected_constraints){
+        std::cerr <<  "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
+        return;
+    }
 
-    // std::cout<< "/* --- Witness Generation --- */" << std::endl;
+    std::cout<< "/* --- Witness Generation --- */" << std::endl;
 
-    // // /* Witness Generation according to the function's input parameters */
+    /* Witness Generation according to the function's input parameters */
 
-    // q_input_old.fill_with_bits(pb, q_input_bits_old);
-    // PKsig_input_old.fill_with_bits(pb, PKsig_input_bits_old);
-    // rho_input_old.fill_with_bits(pb, rho_input_bits_old);
+    q_input_old_1.fill_with_bits(pb, q_input_bits_old_1);
+    PKsig_input_old_1.fill_with_bits(pb, PKsig_input_bits_old_1);
+    rho_input_old_1.fill_with_bits(pb, rho_input_bits_old_1);
 
-    // q_input_new.fill_with_bits(pb, q_input_bits_new);
-    // PKsig_input_new.fill_with_bits(pb, PKsig_input_bits_new);
-    // rho_input_new.fill_with_bits(pb, rho_input_bits_new);
+    q_input_old_2.fill_with_bits(pb, q_input_bits_old_2);
+    PKsig_input_old_2.fill_with_bits(pb, PKsig_input_bits_old_2);
+    rho_input_old_2.fill_with_bits(pb, rho_input_bits_old_2);
+
+    q_input_new.fill_with_bits(pb, q_input_bits_new);
+    PKsig_input_new.fill_with_bits(pb, PKsig_input_bits_new);
+    rho_input_new.fill_with_bits(pb, rho_input_bits_new);
 
 
-    // libff::bit_vector input_bits_old(q_input_bits_old);
-    // input_bits_old.insert(input_bits_old.end(), PKsig_input_bits_old.begin(), PKsig_input_bits_old.end());
-    // input_bits_old.insert(input_bits_old.end(), rho_input_bits_old.begin(), rho_input_bits_old.end());
+    libff::bit_vector input_bits_old_1(q_input_bits_old_1);
+    input_bits_old_1.insert(input_bits_old_1.end(), PKsig_input_bits_old_1.begin(), PKsig_input_bits_old_1.end());
+    input_bits_old_1.insert(input_bits_old_1.end(), rho_input_bits_old_1.begin(), rho_input_bits_old_1.end());
 
-    // libff::bit_vector input_bits_new(q_input_bits_new);
-    // input_bits_new.insert(input_bits_new.end(), PKsig_input_bits_new.begin(), PKsig_input_bits_new.end());
-    // input_bits_new.insert(input_bits_new.end(), rho_input_bits_new.begin(), rho_input_bits_new.end());
+    libff::bit_vector input_bits_old_2(q_input_bits_old_2);
+    input_bits_old_2.insert(input_bits_old_2.end(), PKsig_input_bits_old_2.begin(), PKsig_input_bits_old_2.end());
+    input_bits_old_2.insert(input_bits_old_2.end(), rho_input_bits_old_2.begin(), rho_input_bits_old_2.end());
 
-    // libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
-    // libff::bit_vector input_for_eol_crh_bits(zero_padding_rho_bits);
-    // input_for_eol_crh_bits.insert(input_for_eol_crh_bits.end(), rho_input_bits_old.begin(), rho_input_bits_old.end());
+    libff::bit_vector input_bits_new(q_input_bits_new);
+    input_bits_new.insert(input_bits_new.end(), PKsig_input_bits_new.begin(), PKsig_input_bits_new.end());
+    input_bits_new.insert(input_bits_new.end(), rho_input_bits_new.begin(), rho_input_bits_new.end());
+
+    libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
+
+    libff::bit_vector input_for_eol_crh_bits_1(zero_padding_rho_bits);
+    input_for_eol_crh_bits_1.insert(input_for_eol_crh_bits_1.end(), rho_input_bits_old_1.begin(), rho_input_bits_old_1.end());
+
+    libff::bit_vector input_for_eol_crh_bits_2(zero_padding_rho_bits);
+    input_for_eol_crh_bits_2.insert(input_for_eol_crh_bits_2.end(), rho_input_bits_old_2.begin(), rho_input_bits_old_2.end());
+
 
 
     // libff::bit_vector leaf_cm_old_bits = HashT::get_hash(input_bits_old);
@@ -855,7 +870,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
     // Generatign the Merkle tree 
 
     // the point where two distinct branches joins in the tree
-    uint merge_point = std::rand() % tree_depth;
+    long merge_point = std::rand() % tree_depth;
 
     libff::bit_vector leaf_1 = HashT::get_hash(input_bits_old_1);
     libff::bit_vector leaf_2 = HashT::get_hash(input_bits_old_2);
@@ -901,7 +916,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
         prev_hash_2 = h_2;
     }
 
-    std::cout<<"Here"<<std::endl;
+    // std::cout<<"Here"<<std::endl;
 
     // Merging - The first branch comes from left and the second branch comes from right
     const bool computed_is_right_1 = false;
@@ -916,12 +931,12 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
 
     libff::bit_vector prev_hash = HashT::get_hash(block_merge);
 
-    std::cout<<"merge_point: "<< merge_point <<std::endl;
+    // std::cout<<"merge_point: "<< merge_point <<std::endl;
 
     // Merged Branch
     for (long level = merge_point-1; level >= 0; --level)
     {   
-        std::cout<<level<<std::endl;
+        // std::cout<<level<<std::endl;
         const bool computed_is_right = (std::rand() % 2);
 
         address_1 |= (computed_is_right ? 1ul << (tree_depth-1-level) : 0);
@@ -942,12 +957,12 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
         path_2[level] = other;
 
         prev_hash = h;
-        std::cout<<level<<std::endl;
+        // std::cout<<level<<std::endl;
     }
     root = prev_hash;
 
     cm_new =  HashT::get_hash(input_bits_new);
-    std::cout<<"Here2"<<std::endl;
+    // std::cout<<"Here2"<<std::endl;
 
 
 
