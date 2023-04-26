@@ -423,6 +423,8 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     input_old.generate_r1cs_witness(input_bits_old);
     input_new.generate_r1cs_witness(input_bits_new);
     input_for_eol_crh.generate_r1cs_witness(input_for_eol_crh_bits);
+    cm_new_digest.generate_r1cs_witness(cm_new);
+    eol_old_digest.generate_r1cs_witness(eol_old);
 
     assert(pb.is_satisfied());
 
@@ -453,6 +455,8 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs (
      // In actual implementation it should be generated secretly and passed by the user. 
     const size_t digest_len = HashT::get_digest_len();   
     const size_t q_len = 64;
+    const size_t PKsig_len = 256;
+    const size_t rho_len = 192;
 
     std::generate(input_bits_old.begin(), input_bits_old.end(), [&]() { return std::rand() % 2; });
 
@@ -483,7 +487,11 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs (
     root = prev_hash;
 
     cm_new =  HashT::get_hash(input_bits_new);
-    eol_old =  HashT::get_hash(input_bits_new);
+
+    libff::bit_vector rho_input_bits_old(input_bits_old.begin() + q_len + PKsig_len, input_bits_old.begin() + q_len + PKsig_len + rho_len );
+    libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
+    rho_input_bits_old.insert(rho_input_bits_old.begin(), zero_padding_rho_bits.begin(), zero_padding_rho_bits.end());
+    eol_old =  HashT::get_hash(rho_input_bits_old);
 }
 
 
@@ -593,28 +601,110 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs (
     }
     q_input_bits_new[0] = carry_bit;
 
-    // libff::bit_vector leaf = HashT::get_hash(input_bits_old);
-    // libff::bit_vector prev_hash = leaf;
-    // address = 0;
-    // for (long level = tree_depth-1; level >= 0; --level)
-    // {
-    //     const bool computed_is_right = (std::rand() % 2);
-    //     address |= (computed_is_right ? 1ul << (tree_depth-1-level) : 0);
-    //     address_bits.push_back(computed_is_right);
-    //     libff::bit_vector other(digest_len);
-    //     std::generate(other.begin(), other.end(), [&]() { return std::rand() % 2; });
+    libff::bit_vector input_bits_old_1(q_input_bits_old_1);
+    input_bits_old_1.insert(input_bits_old_1.end(), PKsig_input_bits_old_1.begin(), PKsig_input_bits_old_1.end());
+    input_bits_old_1.insert(input_bits_old_1.end(), rho_input_bits_old_1.begin(), rho_input_bits_old_1.end());
 
-    //     libff::bit_vector block = prev_hash;
-    //     block.insert(computed_is_right ? block.begin() : block.end(), other.begin(), other.end());
-    //     libff::bit_vector h = HashT::get_hash(block);
+    libff::bit_vector input_bits_old_2(q_input_bits_old_2);
+    input_bits_old_2.insert(input_bits_old_2.end(), PKsig_input_bits_old_2.begin(), PKsig_input_bits_old_2.end());
+    input_bits_old_2.insert(input_bits_old_2.end(), rho_input_bits_old_2.begin(), rho_input_bits_old_2.end());
 
-    //     path[level] = other;
-    //     prev_hash = h;
-    // }
-    // root = prev_hash;
+    libff::bit_vector input_bits_new(q_input_bits_new);
+    input_bits_new.insert(input_bits_new.end(), PKsig_input_bits_new.begin(), PKsig_input_bits_new.end());
+    input_bits_new.insert(input_bits_new.end(), rho_input_bits_new.begin(), rho_input_bits_new.end());
 
-    // cm_new =  HashT::get_hash(input_bits_new);
-    // eol_old =  HashT::get_hash(input_bits_new);
+    // Generatign the Merkle tree 
+
+    // the point where two distinct branches joins in the tree
+    uint merge_point = std::rand() % tree_depth;
+
+    libff::bit_vector leaf_1 = HashT::get_hash(input_bits_old_1);
+    libff::bit_vector leaf_2 = HashT::get_hash(input_bits_old_2);
+
+    
+    address_1 = 0;
+    address_2 = 0;
+
+    // Before Merge
+    libff::bit_vector prev_hash_1 = leaf_1;
+    libff::bit_vector prev_hash_2 = leaf_2;
+
+    for (long level = tree_depth-1; level > merge_point; --level)
+    {
+        const bool computed_is_right_1 = (std::rand() % 2);
+        const bool computed_is_right_2 = (std::rand() % 2);
+
+        address_1 |= (computed_is_right_1 ? 1ul << (tree_depth-1-level) : 0);
+        address_2 |= (computed_is_right_2 ? 1ul << (tree_depth-1-level) : 0);
+
+        address_bits_1.push_back(computed_is_right_1);
+        address_bits_2.push_back(computed_is_right_2);
+
+        libff::bit_vector other_1(digest_len);
+        libff::bit_vector other_2(digest_len);
+
+        std::generate(other_1.begin(), other_1.end(), [&]() { return std::rand() % 2; });
+        std::generate(other_2.begin(), other_2.end(), [&]() { return std::rand() % 2; });
+
+        libff::bit_vector block_1 = prev_hash_1;
+        libff::bit_vector block_2 = prev_hash_2;
+
+        block_1.insert(computed_is_right_1 ? block_1.begin() : block_1.end(), other_1.begin(), other_1.end());
+        block_2.insert(computed_is_right_2 ? block_2.begin() : block_2.end(), other_2.begin(), other_2.end());
+
+        libff::bit_vector h_1 = HashT::get_hash(block_1);
+        libff::bit_vector h_2 = HashT::get_hash(block_2);
+
+        path_1[level] = other_1;
+        path_2[level] = other_2;
+
+        prev_hash_1 = h_1;
+        prev_hash_2 = h_2;
+    }
+
+
+    // Merging - The first branch comes from left and the second branch comes from right
+    const bool computed_is_right_1 = false;
+    const bool computed_is_right_2 = true;
+    address_1 |= (computed_is_right_1 ? 1ul << (tree_depth-1-merge_point) : 0);
+    address_2 |= (computed_is_right_2 ? 1ul << (tree_depth-1-merge_point) : 0);
+    address_bits_1.push_back(computed_is_right_1);
+    address_bits_2.push_back(computed_is_right_2);
+
+    libff::bit_vector block_merge = prev_hash_1;
+    block_merge.insert(block_merge.begin(), prev_hash_2.begin(), prev_hash_2.end());
+
+    libff::bit_vector prev_hash = HashT::get_hash(block_merge);
+
+    // Merged Branch
+    for (long level = merge_point-1; level >= 0; --level)
+    {
+        const bool computed_is_right = (std::rand() % 2);
+
+        address_1 |= (computed_is_right ? 1ul << (tree_depth-1-level) : 0);
+        address_2 |= (computed_is_right ? 1ul << (tree_depth-1-level) : 0);
+
+
+        address_bits_1.push_back(computed_is_right);
+        address_bits_2.push_back(computed_is_right);
+
+        libff::bit_vector other(digest_len);
+        std::generate(other.begin(), other.end(), [&]() { return std::rand() % 2; });
+
+        libff::bit_vector block = prev_hash;
+        block.insert(computed_is_right ? block.begin() : block.end(), other.begin(), other.end());
+        libff::bit_vector h = HashT::get_hash(block);
+
+        path_1[level] = other;
+        path_2[level] = other;
+
+        prev_hash = h;
+    }
+    root = prev_hash;
+
+    cm_new =  HashT::get_hash(input_bits_new);
+    eol_old_1 =  HashT::get_hash(input_bits_old_1);
+    eol_old_2 =  HashT::get_hash(input_bits_old_2);
 }
 
 
