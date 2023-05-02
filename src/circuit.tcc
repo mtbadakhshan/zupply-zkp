@@ -760,11 +760,13 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
 
 
 
-    // libff::bit_vector leaf_cm_old_bits = HashT::get_hash(input_bits_old);
+    libff::bit_vector leaf_cm_old_bits_1 = HashT::get_hash(input_bits_old_1);
+    libff::bit_vector leaf_cm_old_bits_2 = HashT::get_hash(input_bits_old_2);
 
-    // root_digest.generate_r1cs_witness(root);
-    // cm_new_digest.generate_r1cs_witness(cm_new);
-    // eol_old_digest.generate_r1cs_witness(eol_old);
+    root_digest.generate_r1cs_witness(root);
+    cm_new_digest.generate_r1cs_witness(cm_new);
+    eol_old_digest_1.generate_r1cs_witness(eol_old_1);
+    eol_old_digest_1.generate_r1cs_witness(eol_old_1);
 
     // address_bits_va.fill_with_bits(pb, address_bits);
     // assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);

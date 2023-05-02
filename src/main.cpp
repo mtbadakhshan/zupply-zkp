@@ -86,9 +86,9 @@ void proof_auth()
 
 
     std::srand ( std::time(NULL) );    // const size_t digest_len = HashT::get_digest_len();
-    const size_t tree_depth = 2;
+    const size_t tree_depth = 20;
 
-    MergeCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    TransCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
     // return;
 
     /* Make a Protoboard */
