@@ -13,7 +13,7 @@ HASH_LEN = 256
 HASH_BYTES = HASH_LEN // 8
 
 def gen_random_bytes(n):
-    return [random.randint(0, 255) for i in xrange(n)]
+    return [random.randint(0, 255) for i in range(n)]
 
 def words_to_bytes(arr):
     return sum(([x >> 24, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff] for x in arr), [])
@@ -21,7 +21,7 @@ def words_to_bytes(arr):
 def bytes_to_words(arr):
     l = len(arr)
     assert l % 4 == 0
-    return [(arr[i*4 + 3] << 24) + (arr[i*4+2] << 16) + (arr[i*4+1] << 8) + arr[i*4] for i in xrange(l//4)]
+    return [(arr[i*4 + 3] << 24) + (arr[i*4+2] << 16) + (arr[i*4+1] << 8) + arr[i*4] for i in range(l//4)]
 
 def cpp_val(s, log_radix=32):
     if log_radix == 8:

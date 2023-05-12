@@ -6,47 +6,108 @@ import sys
 ZERO = [0]*sha256.HASH_BYTES
 
 class Vertex:
-	# A Vertex must always have a left child.
-	def __init__(self, parent = None, left = None, right = None):
-		if left == None:
-			sys.exit("Left child should be specified in non-leaf vertices!")
-		self.parent = parent
-		self.left = left 
-		self.right = right
-		if right: 
-			right_hash_value = right.hash_value
-		else:
-			right_hash_value = ZERO
-		self.hash_value = sha256.H_bytes(left.hash_value + right_hash_value)
+	def __init__(self):
+		self.layer = None
+		self.id = None
+		self.parent = None
+		self.left = None
+		self.right = None
+		self.hash_value = None
 
-	#Leaf
-	def __init__(self, parent, hash_value):
-		self.hash_value = hash_value
+	def print(self):
+		print("#### id = %d ####" %self.id)
+		print(self)
+		print("parent: ", self.parent)
+		print("left: ", self.left)
+		print("right: ", self.right)
+		print(self.hash_value)
+		print("####################################################")
 
-def build_sub_path_to_leaf(leaf_value, parent, n_layer):
+
+def build_sub_tree(leaf_value, parent, n_layer, layer_start, id):
+		v = Vertex()
+		v.layer = layer_start
+		v.id = id
+		v.parent = parent
+		print("v:", v, "v.layer: ", v.layer , "v.id: ", v.id, "v.parent: ", v.parent)
 		if n_layer == 0: # It is at the leaf level
-			return Vertex(parent, leaf_value)
+			v.hash_value = sha256.H_bytes(leaf_value)
+			
 		else:
-			return Vertex(parent = parent, left = build_sub_path_to_leaf(leaf_value, self, n_layer - 1))
+			v.left = build_sub_tree(leaf_value, v, n_layer - 1, layer_start + 1, id + 1)
+			v.hash_value = sha256.H_bytes(v.left.hash_value + ZERO)
+			
+		return v
 
 class Tree:
 	def __init__(self, n_layer, first_leaf_value = ZERO):
-		this.root = Vertex(
-			left = build_sub_path_to_leaf(
-				leaf_value = first_leaf_value, parent = None, n_layer = n_layer
-				)
-			)
+		self.n_layer = n_layer
+		self.root = build_sub_tree([0]*sha256.BLOCK_BYTES, None, n_layer, 0, 0)
+		print("root:", self.root, "root.layer: ", self.root.layer )
 
 
+	def add_leaf(self, leaf_value = ZERO):
+		v = self.root
 		
+		while(v.left):
+			if(v.right):
+				v = v.right
+			else:
+				v = v.left
+
+		# We will have the last added leaf here: v
+		last_id = v.id
+		v = v.parent
+		counter = 1
+		while(v.right):
+			v = v.parent
+			if (v == None):
+				sys.exit("The tree is full!")
+			counter = counter + 1
+		v.right = build_sub_tree([0]*sha256.BLOCK_BYTES, v, counter - 1, v.layer, last_id + 1)
+		v.hash_value = sha256.H_bytes(v.left.hash_value + v.right.hash_value)
+
+		# updating preceding vertices
+		while(v.parent != None):
+			v = v.parent
+			if(v.right):
+				right_hash_value = v.right.hash_value
+			else:
+				right_hash_value = ZERO
+			print(v)		
+			v.hash_value = sha256.H_bytes(v.left.hash_value + right_hash_value)
+			
 
 
-def add_leaf(root, value, n_layer):
-	pass 
+
+def print_tree(v):
+	v.print()
+	if(v.left):
+		print_tree(v.left)
+	if (v.right):
+		print_tree(v.right)
+
+
 
 
 if __name__ == '__main__':
-	t = Tree(5)
+	# root = Vertex()
+	t = Tree(3)
+	print("####################################################")
+	print_tree(t.root)
+	t.add_leaf()
+	print("######################@@@@@##############################")
+	print_tree(t.root)
+	t.add_leaf()
+	print("######################@@@@@##############################")
+	print_tree(t.root)
+	t.add_leaf()
+	print("######################@@@@@##############################")
+	print_tree(t.root)
+	t.add_leaf()
+	print("######################@@@@@##############################")
+	print_tree(t.root)
+
 
 # print(get_hash("0") + get_hash("1"));
 # print("a".encode('utf-8'))
