@@ -123,7 +123,7 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
 
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
+    const r1cs_gg_ppzksnark_keypair<ppT> keypair = r1cs_gg_ppzksnark_generator<ppT>(constraint_system);
 
     // Warning: check that the assignment operation is implemented correctly - avoid shallow copy 
     this->keypair.pk = keypair.pk;
@@ -381,7 +381,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
 
 
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
+    const r1cs_gg_ppzksnark_keypair<ppT> keypair = r1cs_gg_ppzksnark_generator<ppT>(constraint_system);
 
     // Warning: check that the assignment operation is implemented correctly - avoid shallow copy 
     this->keypair.pk = keypair.pk;
@@ -744,7 +744,7 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
 
 
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
-    const r1cs_ppzksnark_keypair<ppT> keypair = r1cs_ppzksnark_generator<ppT>(constraint_system);
+    const r1cs_gg_ppzksnark_keypair<ppT> keypair = r1cs_gg_ppzksnark_generator<ppT>(constraint_system);
 
     // // Warning: check that the assignment operation is implemented correctly - avoid shallow copy 
     this->keypair.pk = keypair.pk;

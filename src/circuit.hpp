@@ -16,8 +16,8 @@
 #include <libsnark/gadgetlib1/gadgets/hashes/hash_io.hpp>
 #include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_authentication_path_variable.hpp>
 
-#include "libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
-#include "libsnark/common/default_types/r1cs_ppzksnark_pp.hpp"
+#include "libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp"
+#include "libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp"
 
 using namespace libsnark;
 
@@ -56,12 +56,12 @@ class Circuit
 	public:
 		const std::string name;
 		Circuit(const std::string& name) : name(name) {}
-		r1cs_ppzksnark_keypair<ppT> get_keypair() { return keypair; }
+		r1cs_gg_ppzksnark_keypair<ppT> get_keypair() { return keypair; }
 		r1cs_primary_input<FieldT> get_primary_input() { return primary_input; }
 		r1cs_auxiliary_input<FieldT> get_auxiliary_input() { return auxiliary_input; }
 
 	protected:
-		r1cs_ppzksnark_keypair<ppT> keypair;
+		r1cs_gg_ppzksnark_keypair<ppT> keypair;
 		r1cs_primary_input<FieldT> primary_input;
 		r1cs_auxiliary_input<FieldT> auxiliary_input;
 	};
