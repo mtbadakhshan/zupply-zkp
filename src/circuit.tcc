@@ -55,7 +55,25 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     protoboard<FieldT> pb;
     
     /* Public Inputs */
+
+    pb_variable<FieldT> root_128bit_1;
+    pb_variable<FieldT> root_128bit_2;
+    root_128bit_1.allocate(pb, "root_128bit_part1");
+    root_128bit_2.allocate(pb, "root_128bit_part2");
+
+    /* Connecting Public inputs */
+
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
+
+    linear_combination<FieldT> root_128bit_lc_1;
+    linear_combination<FieldT> root_128bit_lc_2;
+    for (size_t i = 0; i < 128; ++i) {
+            root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i)); 
+            root_128bit_lc_2.add_term(root_digest.bits[i+128], libff::power<FieldT>(2, i));
+    }
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_1, FieldT::one(), root_128bit_1), "Root part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_2, FieldT::one(), root_128bit_2), "Root part 2 Constraints");
 
     /* Private Inputs */
     pb_variable_array<FieldT> q_input;
@@ -92,11 +110,13 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
     /* Setting the public input*/ 
     //the first 256 bits assigned to the protoboard which are root_digest's bits, are determined as public inputs */
-    pb.set_input_sizes(digest_len);
+    // pb.set_input_sizes(digest_len);
+    pb.set_input_sizes(2);
 
     std::cout<< "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
     /* Trusted Setup : Generating the CRS (keypar) */
- 
+    
+
     crh.generate_r1cs_constraints();
     path_var.generate_r1cs_constraints();
     ml.generate_r1cs_constraints();
@@ -111,7 +131,7 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
     const size_t num_constraints = pb.num_constraints();
     const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth)
-                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size);
+                                            + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + 2;
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints){
@@ -131,6 +151,15 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
 
     libff::bit_vector leaf = HashT::get_hash(input_bits);
+
+    for (size_t i = 0; i < 128; ++i) {
+            pb.val(root_128bit_1) += root[i] ? libff::power<FieldT>(2, i): 0;
+            pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
+    }
+
+    // std::cout<<"root: " << root << std::endl;
+
+    
 
     root_digest.generate_r1cs_witness(root);
     address_bits_va.fill_with_bits(pb, address_bits);
@@ -240,7 +269,8 @@ Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
 
 /* --- SETUP --- */
 template<typename FieldT, typename HashT, typename ppT>
-void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
+void TransCircuit<FieldT, HashT, ppT>::setup(
+                    libff::bit_vector root,
                     libff::bit_vector cm_new,
                     libff::bit_vector eol_old,
                     libff::bit_vector q_input_bits_old,
@@ -260,6 +290,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     const size_t PKsig_len = 256;
     const size_t rho_len = 192;
     // const size_t block_len = HashT::get_block_len();
+
      
     /* Make a Protoboard */
     protoboard<FieldT> pb;
@@ -400,6 +431,15 @@ void TransCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     root_digest.generate_r1cs_witness(root);
     cm_new_digest.generate_r1cs_witness(cm_new);
     eol_old_digest.generate_r1cs_witness(eol_old);
+
+     // DEBUGING
+        std::cout<<"DEBUGING"<<std::endl;
+        std::cout<< "root_digest:" << std::endl;
+        for(size_t i=0; i < digest_len; i++)
+            std::cout<<root[i];
+        // std::cout<< "root:" <<root << std::endl;
+        std::cout<<"END of DEBUGING"<<std::endl;
+    // END of DEBUGING
 
     address_bits_va.fill_with_bits(pb, address_bits);
     assert(address_bits_va.get_field_element_from_bits(pb).as_ulong() == address);

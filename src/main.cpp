@@ -88,7 +88,7 @@ void proof_auth()
     std::srand ( std::time(NULL) );    // const size_t digest_len = HashT::get_digest_len();
     const size_t tree_depth = 20;
 
-    TransCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
     // return;
 
     /* Make a Protoboard */
@@ -207,11 +207,13 @@ void proof_auth()
 
     
 
-    libff::print_header("Preprocess verification key");
-    r1cs_ppzksnark_processed_verification_key<ppT> pvk = r1cs_ppzksnark_verifier_process_vk<ppT>(
-                                                                        circuit.get_keypair().vk);
+    // libff::print_header("Preprocess verification key");
+    // r1cs_ppzksnark_processed_verification_key<ppT> pvk = r1cs_ppzksnark_verifier_process_vk<ppT>(
+    //                                                                     circuit.get_keypair().vk);
 
 
+    std::cout << "Primary (public) input: " << circuit.get_primary_input() << std::endl;
+    
     printf("Generating proof:!\n");
     const r1cs_ppzksnark_proof<ppT> proof = r1cs_ppzksnark_prover<ppT>(circuit.get_keypair().pk,
                                                                         circuit.get_primary_input(),
@@ -226,7 +228,11 @@ void proof_auth()
     std::cout << "FOR SUCCESSFUL VERIFICATION" << std::endl;
     // std::cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << std::endl;
     // std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
-    // std::cout << "Primary (public) input: " << pb.primary_input() << std::endl;
+    std::cout << "FieldT::capacity(): " << FieldT::capacity() << std::endl; 
+    std::cout << "Verification Key Size: ";
+    circuit.get_keypair().vk.print_size();
+    std::cout << "Verification Key: " << circuit.get_keypair().vk << std::endl;
+    std::cout << "Primary (public) input: " << circuit.get_primary_input() << std::endl;
     // std::cout << "num_inputs: " << pb.num_inputs() << std::endl;
     // std::cout << "root: ";
     // for(int i = 0; i < digest_len; i++){
