@@ -1,5 +1,13 @@
-// #ifndef CIRCUIT_CPP
-// #define CIRCUIT_CPP
+/** @file
+ *****************************************************************************
+ * @author     This file is part of Zupply, developed by Mohammadtaghi Badakhshan
+ *      
+ * @copyright  MIT license (see LICENSE file)
+ *****************************************************************************/
+
+#ifndef CIRCUIT_HPP
+#error "utils.tcc should not be included directly. Include utils.hpp instead."
+#endif
 
 #include "circuit.hpp"
 
@@ -65,8 +73,8 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
 
-    linear_combination<FieldT> root_128bit_lc_1;
-    linear_combination<FieldT> root_128bit_lc_2;
+    linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
+
     for (size_t i = 0; i < 128; ++i) {
             root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i)); 
             root_128bit_lc_2.add_term(root_digest.bits[i+128], libff::power<FieldT>(2, i));
@@ -109,8 +117,6 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
 
     /* Setting the public input*/ 
-    //the first 256 bits assigned to the protoboard which are root_digest's bits, are determined as public inputs */
-    // pb.set_input_sizes(digest_len);
     pb.set_input_sizes(2);
 
     std::cout<< "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
@@ -296,9 +302,53 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
     protoboard<FieldT> pb;
     
     /* Public Inputs */
+        // root
+    pb_variable<FieldT> root_128bit_1;
+    pb_variable<FieldT> root_128bit_2;
+    root_128bit_1.allocate(pb, "root_128bit_part1");
+    root_128bit_2.allocate(pb, "root_128bit_part2");
+
+        // cm_new
+    pb_variable<FieldT> cm_new_128bit_1;
+    pb_variable<FieldT> cm_new_128bit_2;
+    cm_new_128bit_1.allocate(pb, "cm_new_128bit_part1");
+    cm_new_128bit_2.allocate(pb, "cm_new_128bit_part2");
+
+        // eol_old
+    pb_variable<FieldT> eol_old_128bit_1;
+    pb_variable<FieldT> eol_old_128bit_2;
+    eol_old_128bit_1.allocate(pb, "eol_old_128bit_part1");
+    eol_old_128bit_2.allocate(pb, "eol_old_128bit_part2");
+
+    /* Connecting Public inputs */
     digest_variable<FieldT> root_digest(pb, digest_len, "root_digest");
     digest_variable<FieldT> cm_new_digest(pb, digest_len, "cm_new_digest");
     digest_variable<FieldT> eol_old_digest(pb, digest_len, "eol_old_digest");
+
+    linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
+    linear_combination<FieldT> cm_new_128bit_lc_1, cm_new_128bit_lc_2;
+    linear_combination<FieldT> eol_old_128bit_lc_1, eol_old_128bit_lc_2;
+
+    for (size_t i = 0; i < 128; ++i) {
+            root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i)); 
+            root_128bit_lc_2.add_term(root_digest.bits[i+128], libff::power<FieldT>(2, i));
+
+            cm_new_128bit_lc_1.add_term(cm_new_digest.bits[i], libff::power<FieldT>(2, i)); 
+            cm_new_128bit_lc_2.add_term(cm_new_digest.bits[i+128], libff::power<FieldT>(2, i));
+
+            eol_old_128bit_lc_1.add_term(eol_old_digest.bits[i], libff::power<FieldT>(2, i)); 
+            eol_old_128bit_lc_2.add_term(eol_old_digest.bits[i+128], libff::power<FieldT>(2, i));
+    }
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_1, FieldT::one(), root_128bit_1), "Root part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_2, FieldT::one(), root_128bit_2), "Root part 2 Constraints");
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(cm_new_128bit_lc_1, FieldT::one(), cm_new_128bit_1), "cm_new part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(cm_new_128bit_lc_2, FieldT::one(), cm_new_128bit_2), "cm_new part 2 Constraints");
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_128bit_lc_1, FieldT::one(), eol_old_128bit_1), "eol_old part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_128bit_lc_2, FieldT::one(), eol_old_128bit_2), "eol_old part 2 Constraints");
+
 
 
     /* Private Inputs */
@@ -365,9 +415,9 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
 
 
     /* Setting the public input*/ 
-    //The first 3*256 bits assigned to the protoboard which are root_digest, cm_new_digest and eol_old_digest
+    //The first 3*2 128-bit numbers are assigned to the protoboard which are root_digest, cm_new_digest and eol_old_digest
     //These are determined as public inputs */
-    pb.set_input_sizes(digest_len * 3);
+    pb.set_input_sizes(2 * 3);
 
     std::cout<< "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
     /* Trusted Setup : Generating the CRS (keypar) */
@@ -392,7 +442,8 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
                                             + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
                                             + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
                                             + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)
-                                            + 64; // for the comparison
+                                            + 64 
+                                            + 6; // for the comparison
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints){
@@ -427,6 +478,17 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
 
 
     libff::bit_vector leaf_cm_old_bits = HashT::get_hash(input_bits_old);
+
+    for (size_t i = 0; i < 128; ++i) {
+            pb.val(root_128bit_1) += root[i] ? libff::power<FieldT>(2, i): 0;
+            pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
+
+            pb.val(cm_new_128bit_1) += cm_new[i] ? libff::power<FieldT>(2, i): 0;
+            pb.val(cm_new_128bit_2) += cm_new[i + 128] ? libff::power<FieldT>(2, i) : 0;
+
+            pb.val(eol_old_128bit_1) += eol_old[i] ? libff::power<FieldT>(2, i): 0;
+            pb.val(eol_old_128bit_2) += eol_old[i + 128] ? libff::power<FieldT>(2, i) : 0;
+    }
 
     root_digest.generate_r1cs_witness(root);
     cm_new_digest.generate_r1cs_witness(cm_new);

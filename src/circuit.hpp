@@ -1,3 +1,10 @@
+/** @file
+ *****************************************************************************
+ * @author     This file is part of Zupply, developed by Mohammadtaghi Badakhshan
+ *      
+ * @copyright  MIT license (see LICENSE file)
+ *****************************************************************************/
+
 #ifndef CIRCUIT_HPP
 #define CIRCUIT_HPP
 

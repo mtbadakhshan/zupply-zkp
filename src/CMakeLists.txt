@@ -8,6 +8,14 @@ add_library(
   circuit.hpp
 )
 
+add_library(
+  utils 
+  STATIC
+
+  utils.tcc 
+  utils.hpp
+)
+
 
 target_link_libraries(
   circuit
@@ -17,6 +25,21 @@ target_link_libraries(
 
 target_include_directories(
   circuit
+
+  PUBLIC
+  ${DEPENDS_DIR}/libsnark
+  ${DEPENDS_DIR}/libsnark/depends/libfqfft
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(
+  utils
+
+  snark
+)
+
+target_include_directories(
+  utils
 
   PUBLIC
   ${DEPENDS_DIR}/libsnark
@@ -35,6 +58,7 @@ target_link_libraries(
   main
 
   circuit
+  utils
   snark
 )
 target_include_directories(
