@@ -2,14 +2,11 @@
 This is the implementation of the zero-knowledge proof protocols in Zupply framework.
 
 
-## Running the code
+# Build instructions
 
 ### 1. Clone the repository
 
     $ git clone https://github.com/mtbadakhshan/zupply-zkp.git
-
-
-# Build instructions
 
 
 ### Dependencies
@@ -64,7 +61,20 @@ Concretely, here are the requisite packages in some Linux distributions:
 ## Building
 Fetch dependencies from their GitHub repos:
 
-    $ git submodule init && git submodule update
+    $ git submodule update --init --recursive
+
+Next, initialize the build directory.
+
+    $ mkdir build && cd build && cmake ..
+
+Lastly, compile the library.
+
+    $ make
+
+## Running
+use the following command from the ``build`` directory:
+
+    $ ./src/main
 
 ## Acknowledgment
 I followed the instruction on https://github.com/howardwu/libsnark-tutorial
