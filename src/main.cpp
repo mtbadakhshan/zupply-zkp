@@ -59,10 +59,10 @@ template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
     std::srand ( std::time(NULL) ); 
-    std::string circuit_type = "MergeCircuit";
+    std::string circuit_type = "AuthCircuit";
     const size_t tree_depth = 20;
 
-    MergeCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
     
     // if (circuit_type.compare("AuthCircuit") == 0)
     //     AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
@@ -90,6 +90,7 @@ void proof_auth()
                                                                         circuit.get_primary_input(),
                                                                         circuit.get_auxiliary_input());
 
+    // std::cout << "Proving key Size: " << circuit.get_keypair().pk.size() << std::endl;
 
     save_proof<FieldT, HashT, ppT>(proof,  circuit.get_primary_input(), path);
     printf("Verifing:!\n");

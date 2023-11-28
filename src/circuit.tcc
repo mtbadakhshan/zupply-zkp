@@ -62,25 +62,36 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
     /* Public Inputs */
 
-    pb_variable<FieldT> root_128bit_1;
-    pb_variable<FieldT> root_128bit_2;
-    root_128bit_1.allocate(pb, "root_128bit_part1");
-    root_128bit_2.allocate(pb, "root_128bit_part2");
+    // pb_variable<FieldT> root_128bit_1;
+    // pb_variable<FieldT> root_128bit_2;
+    // root_128bit_1.allocate(pb, "root_128bit_part1");
+    // root_128bit_2.allocate(pb, "root_128bit_part2");
+
+
+    pb_variable<FieldT> root_256bit;
+    root_256bit.allocate(pb, "root_256bit");
 
     /* Connecting Public inputs */
 
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
-
-    linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
-
-    for (size_t i = 0; i < 128; ++i)
+    linear_combination<FieldT> root_256bit_lc;
+    for (size_t i = 0; i < 256; ++i)
     {
-        root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i));
-        root_128bit_lc_2.add_term(root_digest.bits[i + 128], libff::power<FieldT>(2, i));
+        root_256bit_lc.add_term(root_digest.bits[i], libff::power<FieldT>(2, i));
     }
 
-    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_1, FieldT::one(), root_128bit_1), "Root part 1 Constraints");
-    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_2, FieldT::one(), root_128bit_2), "Root part 2 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_256bit_lc, FieldT::one(), root_256bit), "Root part 1 Constraints");
+
+    // linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
+
+    // for (size_t i = 0; i < 128; ++i)
+    // {
+    //     root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i));
+    //     root_128bit_lc_2.add_term(root_digest.bits[i + 128], libff::power<FieldT>(2, i));
+    // }
+
+    // pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_1, FieldT::one(), root_128bit_1), "Root part 1 Constraints");
+    // pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_2, FieldT::one(), root_128bit_2), "Root part 2 Constraints");
 
     /* Private Inputs */
     pb_variable_array<FieldT> q_input;
@@ -114,7 +125,7 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     sha256_two_to_one_hash_gadget<FieldT> crh(pb, SHA256_block_size, input, leaf_digest, "crh");
 
     /* Setting the public input*/
-    pb.set_input_sizes(2);
+    pb.set_input_sizes(1);
 
     std::cout << "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
     /* Trusted Setup : Generating the CRS (keypar) */
@@ -131,7 +142,7 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     this->keypair.vk = keypair.vk;
 
     const size_t num_constraints = pb.num_constraints();
-    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + 2;
+    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + 1;
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints)
@@ -139,6 +150,8 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
         std::cerr << "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
         return;
     }
+
+    std::cout << "Setup done - num_constraints:" << num_constraints << std::endl;
 
     std::cout << "/* --- Witness Generation --- */" << std::endl;
 
@@ -151,10 +164,16 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
 
     libff::bit_vector leaf = HashT::get_hash(input_bits);
 
-    for (size_t i = 0; i < 128; ++i)
+    // for (size_t i = 0; i < 128; ++i)
+    // {
+    //     pb.val(root_128bit_1) += root[i] ? libff::power<FieldT>(2, i) : 0;
+    //     pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
+    // }
+
+    for (size_t i = 0; i < 256; ++i)
     {
-        pb.val(root_128bit_1) += root[i] ? libff::power<FieldT>(2, i) : 0;
-        pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
+        pb.val(root_256bit) += root[i] ? libff::power<FieldT>(2, i) : 0;
+        // pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
     }
 
     // std::cout<<"root: " << root << std::endl;
@@ -427,6 +446,8 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
         std::cerr << "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
         return;
     }
+
+    std::cout << "Setup done - num_constraints:" << num_constraints << std::endl;
 
     std::cout << "/* --- Witness Generation --- */" << std::endl;
 
@@ -789,6 +810,8 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
         std::cerr << "num_constraints:" << num_constraints << ",  expected_constraints:" << expected_constraints << std::endl;
         return;
     }
+
+    std::cout << "Setup done - num_constraints:" << num_constraints << std::endl;
 
     std::cout << "/* --- Witness Generation --- */" << std::endl;
 
