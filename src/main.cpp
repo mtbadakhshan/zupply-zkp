@@ -59,10 +59,10 @@ template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
     std::srand ( std::time(NULL) ); 
-    std::string circuit_type = "AuthCircuit";
+    std::string circuit_type = "MergeCircuit";
     const size_t tree_depth = 20;
 
-    AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    MergeCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
     
     // if (circuit_type.compare("AuthCircuit") == 0)
     //     AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
