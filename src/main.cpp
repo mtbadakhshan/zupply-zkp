@@ -47,7 +47,7 @@
 #include "libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp"
 #include "libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp"
 
-#include "circuit.hpp"
+#include "np_circuits/circuit.hpp"
 #include "utils.hpp"
 
 
@@ -59,10 +59,10 @@ template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
     std::srand ( std::time(NULL) ); 
-    std::string circuit_type = "MergeCircuit";
+    std::string circuit_type = "TransCircuit";
     const size_t tree_depth = 20;
 
-    MergeCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    TransCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
     
     // if (circuit_type.compare("AuthCircuit") == 0)
     //     AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);

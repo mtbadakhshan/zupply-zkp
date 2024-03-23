@@ -191,5 +191,8 @@ class MergeCircuit : public Circuit<FieldT, HashT, ppT>
 
 
 
-#include "circuit.tcc"
+// #include "circuit.tcc"
+#include "auth_circuit.tcc"
+#include "trans_circuit.tcc"
+#include "merge_circuit.tcc"
 #endif
