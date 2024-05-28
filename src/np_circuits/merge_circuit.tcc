@@ -658,14 +658,14 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
         // std::cout<<"level: "<<level<<std::endl;
         libff::bit_vector block = prev_hash_1;
         bool computed_is_right = address_bits_1[level];
-        block.insert(computed_is_right ? block.begin() : block.end(), path_1[level].begin(), path_1[level].end());
+        block.insert(computed_is_right ? block.end() : block.begin(), path_1[level].begin(), path_1[level].end());
         libff::bit_vector h = HashT::get_hash(block);
         prev_hash_1 = h;
         // std::cout<<"level: "<<level<<std::endl;
     }
     
 std:: cout << "Here! " << std::endl;
-    std:: cout << "computed root: ";
+    std:: cout << "computed root1: ";
     for (size_t j{0}; j < digest_len; j++)
             std:: cout  << prev_hash_1[j];
     std::cout << std::endl;
@@ -677,8 +677,8 @@ std:: cout << "Here! " << std::endl;
 
         // std::cout<<"level: "<<level<<std::endl;
         libff::bit_vector block = prev_hash_2;
-        bool computed_is_right = address_bits_2[level];
-        block.insert(computed_is_right ? block.begin() : block.end(), path_2[level].begin(), path_2[level].end());
+        bool computed_is_right = !address_bits_2[level];
+        block.insert(computed_is_right ? block.end() : block.begin(), path_2[level].begin(), path_2[level].end());
         libff::bit_vector h = HashT::get_hash(block);
         prev_hash_2 = h;
         // std::cout<<"level: "<<level<<std::endl;
