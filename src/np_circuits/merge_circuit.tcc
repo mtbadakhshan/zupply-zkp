@@ -363,7 +363,7 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
 
 
 
-    std::cout << "ml_1.computed_root.bits.get_bits()" << ml_1.root.bits.get_bits(pb)[0] << std::endl;
+    // std::cout << "ml_1.computed_root.bits.get_bits()" << ml_1.root.bits.get_bits(pb)[0] << std::endl;
 
     // // /* make sure that read checker didn't accidentally overwrite anything */
     root_digest.generate_r1cs_witness(root);
@@ -403,9 +403,15 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
         std::cerr << "pb is Not Satisfied" << std::endl;
         return;
     }
+    std::cout << "pb is satisfied!" << std::endl;
+
 
     this->primary_input = pb.primary_input();
+    std::cout << "Primary inputes are assigned!" << std::endl;
+
     this->auxiliary_input = pb.auxiliary_input();
+    std::cout << "Auxiliary inputes are assigned!" << std::endl;
+
 }
 
 /* --- GENERATE RANDOM INPUTS --- */
@@ -438,7 +444,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     const size_t q_len = 64;
     const size_t rho_len = 192;
 
-    q_input_bits_old_1[0] = 0; // To prevent overflow
+    q_input_bits_old_1[0] = 0; // the offset is to prevent overflow
     std::generate(q_input_bits_old_1.begin() + 1, q_input_bits_old_1.end(), [&]()
                   { return std::rand() % 2; });
     std::generate(PKsig_input_bits_old_1.begin(), PKsig_input_bits_old_1.end(), [&]()
@@ -446,7 +452,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     std::generate(rho_input_bits_old_1.begin(), rho_input_bits_old_1.end(), [&]()
                   { return std::rand() % 2; });
 
-    q_input_bits_old_2[0] = 0; // To prevent overflow
+    q_input_bits_old_2[0] = 0; // the offset is to prevent overflow
     std::generate(q_input_bits_old_2.begin() + 1, q_input_bits_old_2.end(), [&]()
                   { return std::rand() % 2; });
     std::generate(PKsig_input_bits_old_2.begin(), PKsig_input_bits_old_2.end(), [&]()
@@ -534,9 +540,25 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
 
         address_bits_1.push_back(computed_is_right_1);
         address_bits_2.push_back(computed_is_right_2);
+     
+    //  //// DEBUG
+    //     std:: cout << "level: " << level << std::endl;
+    //     std:: cout << "address_bits_1: ";
+    //     for (size_t i{0}; i < tree_depth; i++)
+    //         std:: cout  << address_bits_1[i] ;
+    //     std::cout << std::endl;
+    //     std:: cout  << "address_1: " << address_1 << std::endl ;
+
+    //     std:: cout << "address_bits_2: ";
+    //     for (size_t i{0}; i < tree_depth; i++)
+    //         std:: cout  << address_bits_2[i] ;
+    //     std::cout << std::endl;
+    //     std:: cout  << "address_2: " << address_2 << std::endl ;
+    // //// DEBUG - END
 
         libff::bit_vector other_1(digest_len);
         libff::bit_vector other_2(digest_len);
+
 
         std::generate(other_1.begin(), other_1.end(), [&]()
                       { return std::rand() % 2; });
@@ -573,7 +595,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     path_2[merge_point] = prev_hash_1;
 
     libff::bit_vector block_merge = prev_hash_1;
-    block_merge.insert(block_merge.begin(), prev_hash_2.begin(), prev_hash_2.end());
+    block_merge.insert(block_merge.end(), prev_hash_2.begin(), prev_hash_2.end());
 
     libff::bit_vector prev_hash = HashT::get_hash(block_merge);
 
@@ -582,7 +604,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     // Merged Branch
     for (long level = merge_point - 1; level >= 0; --level)
     {
-        // std::cout<<level<<std::endl;
+        std::cout<<"Here in the merge branch"<<level<<std::endl;
         const bool computed_is_right = (std::rand() % 2);
 
         address_1 |= (computed_is_right ? 1ul << (tree_depth - 1 - level) : 0);
@@ -652,43 +674,63 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
 
 
     prev_hash_1 = leaf_1;
-
-    for (long level = tree_depth - 1; level >= 0; level--){
-
-        // std::cout<<"level: "<<level<<std::endl;
-        libff::bit_vector block = prev_hash_1;
-        bool computed_is_right = address_bits_1[level];
-        block.insert(computed_is_right ? block.end() : block.begin(), path_1[level].begin(), path_1[level].end());
-        libff::bit_vector h = HashT::get_hash(block);
-        prev_hash_1 = h;
-        // std::cout<<"level: "<<level<<std::endl;
-    }
-    
-std:: cout << "Here! " << std::endl;
-    std:: cout << "computed root1: ";
-    for (size_t j{0}; j < digest_len; j++)
-            std:: cout  << prev_hash_1[j];
-    std::cout << std::endl;
-
-
     prev_hash_2 = leaf_2;
 
-    for (long level = tree_depth - 1; level >= 0; level--){
+    for (long level = tree_depth -1; level >= 0; level--){
 
-        // std::cout<<"level: "<<level<<std::endl;
-        libff::bit_vector block = prev_hash_2;
-        bool computed_is_right = !address_bits_2[level];
-        block.insert(computed_is_right ? block.end() : block.begin(), path_2[level].begin(), path_2[level].end());
-        libff::bit_vector h = HashT::get_hash(block);
-        prev_hash_2 = h;
+        std::cout<<"level: "<<level<<std::endl;
+        libff::bit_vector block_1 = prev_hash_1;
+        libff::bit_vector block_2 = prev_hash_2;
+
+        bool computed_is_right_1 = address_bits_1[tree_depth -1 - level];
+        bool computed_is_right_2 = address_bits_2[tree_depth -1 - level];
+
+        block_1.insert(computed_is_right_1 ? block_1.begin() : block_1.end(), path_1[level].begin(), path_1[level].end());
+        block_2.insert(computed_is_right_2 ? block_2.begin() : block_2.end(), path_2[level].begin(), path_2[level].end());
+
+        // std:: cout << "Here! " << std::endl;
+        // // DEBUGGING
+        // std:: cout << "block_1: ";
+        // for (size_t j{0}; j < 2*digest_len; j++)
+        //         std:: cout  << block_1[j];
+        // std::cout << std::endl;
+        // // DEBUGGING
+
+        libff::bit_vector h_1 = HashT::get_hash(block_1);
+        libff::bit_vector h_2 = HashT::get_hash(block_2);
+        
+        prev_hash_1 = h_1;
+        prev_hash_2 = h_2;
         // std::cout<<"level: "<<level<<std::endl;
     }
     
-std:: cout << "Here! " << std::endl;
-    std:: cout << "computed root2: ";
-    for (size_t j{0}; j < digest_len; j++)
-            std:: cout  << prev_hash_2[j];
-    std::cout << std::endl;
+    // std:: cout << "Here! " << std::endl;
+        std:: cout << "computed root1: ";
+        for (size_t j{0}; j < digest_len; j++)
+                std:: cout  << prev_hash_1[j];
+        std::cout << std::endl;
+
+    // std:: cout << "Here! " << std::endl;
+        std:: cout << "computed root2: ";
+        for (size_t j{0}; j < digest_len; j++)
+                std:: cout  << prev_hash_2[j];
+        std::cout << std::endl;
+
+
+//     prev_hash_2 = leaf_2;
+
+//     for (long level = tree_depth - 1; level >= 0; level--){
+
+//         // std::cout<<"level: "<<level<<std::endl;
+//         libff::bit_vector block = prev_hash_2;
+//         bool computed_is_right = !address_bits_2[level];
+//         block.insert(computed_is_right ? block.end() : block.begin(), path_2[level].begin(), path_2[level].end());
+//         libff::bit_vector h = HashT::get_hash(block);
+//         prev_hash_2 = h;
+//         // std::cout<<"level: "<<level<<std::endl;
+//     }
+    
+
 
 
     cm_new = HashT::get_hash(input_bits_new);

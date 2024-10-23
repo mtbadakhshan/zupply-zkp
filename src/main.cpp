@@ -81,7 +81,7 @@ void proof_auth()
     save_pp<FieldT, HashT, ppT>(circuit, path);
 
 
-    std::cout << "Primary (public) input: " << circuit.get_primary_input() << std::endl;
+    // std::cout << "Primary (public) input: " << circuit.get_primary_input() << std::endl;
 
     
 

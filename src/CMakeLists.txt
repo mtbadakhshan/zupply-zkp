@@ -4,8 +4,7 @@ add_library(
   circuit 
   STATIC
 
-  circuit.tcc 
-  circuit.hpp
+  np_circuits/circuit.hpp
 )
 
 add_library(
