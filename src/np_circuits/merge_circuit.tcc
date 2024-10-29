@@ -5,6 +5,7 @@
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
+#include <cstddef>
 #ifndef CIRCUIT_HPP
 #error "utils.tcc should not be included directly. Include utils.hpp instead."
 #endif
@@ -16,7 +17,7 @@
 /* -------- MergeCircuit ------------------------------------------------------------------------------------------------ */
 /* ====================================================================================================================== */
 template <typename FieldT, typename HashT, typename ppT>
-MergeCircuit<FieldT, HashT, ppT>::MergeCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
+MergeCircuit<FieldT, HashT, ppT>::MergeCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name, tree_depth)
 {
 
     std::cout << "/* --- MergeCircuit --- */" << std::endl;
@@ -92,19 +93,77 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     const size_t q_len = 64;
     const size_t PKsig_len = 256;
     const size_t rho_len = 192;
-    // const size_t block_len = HashT::get_block_len();
+    const size_t tree_depth = this->tree_depth;
+
 
     /* Make a Protoboard */
     protoboard<FieldT> pb;
 
     // /* Public Inputs */
+    
+    // root
+    pb_variable<FieldT> root_128bit_1;
+    pb_variable<FieldT> root_128bit_2;
+    root_128bit_1.allocate(pb, "root_128bit_part1");
+    root_128bit_2.allocate(pb, "root_128bit_part2");
+
+    // cm_new
+    pb_variable<FieldT> cm_new_128bit_1;
+    pb_variable<FieldT> cm_new_128bit_2;
+    cm_new_128bit_1.allocate(pb, "cm_new_128bit_part1");
+    cm_new_128bit_2.allocate(pb, "cm_new_128bit_part2");
+
+    // eol_old_1
+    pb_variable<FieldT> eol_old_1_128bit_1;
+    pb_variable<FieldT> eol_old_1_128bit_2;
+    eol_old_1_128bit_1.allocate(pb, "eol_old_1_128bit_part1");
+    eol_old_1_128bit_2.allocate(pb, "eol_old_1_128bit_part2");
+
+    // eol_old_2
+    pb_variable<FieldT> eol_old_2_128bit_1;
+    pb_variable<FieldT> eol_old_2_128bit_2;
+    eol_old_2_128bit_1.allocate(pb, "eol_old_2_128bit_part1");
+    eol_old_2_128bit_2.allocate(pb, "eol_old_2_128bit_part2");
+
+    /* Connecting Public inputs */
     digest_variable<FieldT> root_digest(pb, digest_len, "root_digest");
     digest_variable<FieldT> cm_new_digest(pb, digest_len, "cm_new_digest");
     digest_variable<FieldT> eol_old_1_digest(pb, digest_len, "eol_old_1_digest");
     digest_variable<FieldT> eol_old_2_digest(pb, digest_len, "eol_old_2_digest");
 
-    /* Private Inputs */
+    linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
+    linear_combination<FieldT> cm_new_128bit_lc_1, cm_new_128bit_lc_2;
+    linear_combination<FieldT> eol_old_1_128bit_lc_1, eol_old_1_128bit_lc_2;
+    linear_combination<FieldT> eol_old_2_128bit_lc_1, eol_old_2_128bit_lc_2;
 
+    for (size_t i = 0; i < 128; ++i)
+    {
+        root_128bit_lc_1.add_term(root_digest.bits[i], libff::power<FieldT>(2, i));
+        root_128bit_lc_2.add_term(root_digest.bits[i + 128], libff::power<FieldT>(2, i));
+
+        cm_new_128bit_lc_1.add_term(cm_new_digest.bits[i], libff::power<FieldT>(2, i));
+        cm_new_128bit_lc_2.add_term(cm_new_digest.bits[i + 128], libff::power<FieldT>(2, i));
+
+        eol_old_1_128bit_lc_1.add_term(eol_old_1_digest.bits[i], libff::power<FieldT>(2, i));
+        eol_old_1_128bit_lc_2.add_term(eol_old_1_digest.bits[i + 128], libff::power<FieldT>(2, i));
+
+        eol_old_2_128bit_lc_1.add_term(eol_old_2_digest.bits[i], libff::power<FieldT>(2, i));
+        eol_old_2_128bit_lc_2.add_term(eol_old_2_digest.bits[i + 128], libff::power<FieldT>(2, i));
+    }
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_1, FieldT::one(), root_128bit_1), "Root part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_128bit_lc_2, FieldT::one(), root_128bit_2), "Root part 2 Constraints");
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(cm_new_128bit_lc_1, FieldT::one(), cm_new_128bit_1), "cm_new part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(cm_new_128bit_lc_2, FieldT::one(), cm_new_128bit_2), "cm_new part 2 Constraints");
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_1_128bit_lc_1, FieldT::one(), eol_old_1_128bit_1), "eol_old_1 part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_1_128bit_lc_2, FieldT::one(), eol_old_1_128bit_2), "eol_old_1 part 2 Constraints");
+
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_2_128bit_lc_1, FieldT::one(), eol_old_2_128bit_1), "eol_old_2 part 1 Constraints");
+    pb.add_r1cs_constraint(r1cs_constraint<FieldT>(eol_old_2_128bit_lc_2, FieldT::one(), eol_old_2_128bit_2), "eol_old_2 part 2 Constraints");
+
+    /* Private Inputs */
     // old cm_1 inputs
     pb_variable_array<FieldT> q_input_old_1;
     q_input_old_1.allocate(pb, q_len, "q_input_old_1");
@@ -168,8 +227,8 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     block_variable<FieldT> input_for_eol_crh_2(pb, input_for_eol_crh_parts_2, "input_for_eol_crh_2"); // It's "0000...0000", "rho"
 
     // /* Building the comparator */
-    // // q_input_old == q_input_new
-    // is_equal_gadget<FieldT> comparator(pb, q_input_old, q_input_new, "comparator");
+    // // q_input_old_1 + q_input_old_2 == q_input_new
+    is_sum_equal_gadget<FieldT> sum_comparator(pb, q_input_old_1, q_input_old_2, q_input_new, "comparator");
 
     /* Building the MHT */
     // #1
@@ -177,14 +236,14 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     address_bits_va_1.allocate(pb, tree_depth, "address_bits_va_1");
     digest_variable<FieldT> leaf_digest_1(pb, digest_len, "leaf_digest_1");
     merkle_authentication_path_variable<FieldT, HashT> path_var_1(pb, tree_depth, "path_var_1");
-    merkle_tree_check_read_gadget<FieldT, HashT> ml_1(pb, tree_depth, address_bits_va_1, leaf_digest_1, root_digest, path_var_1, ONE, "ml");
+    merkle_tree_check_read_gadget<FieldT, HashT> ml_1(pb, tree_depth, address_bits_va_1, leaf_digest_1, root_digest, path_var_1, ONE, "ml1");
 
     // #2
     pb_variable_array<FieldT> address_bits_va_2;
     address_bits_va_2.allocate(pb, tree_depth, "address_bits_va_2");
     digest_variable<FieldT> leaf_digest_2(pb, digest_len, "leaf_digest_2");
     merkle_authentication_path_variable<FieldT, HashT> path_var_2(pb, tree_depth, "path_var_2");
-    merkle_tree_check_read_gadget<FieldT, HashT> ml_2(pb, tree_depth, address_bits_va_2, leaf_digest_2, root_digest, path_var_2, ONE, "ml");
+    merkle_tree_check_read_gadget<FieldT, HashT> ml_2(pb, tree_depth, address_bits_va_2, leaf_digest_2, root_digest, path_var_2, ONE, "ml2");
 
     // /* Building CRH to get commitment  old cm */
     sha256_two_to_one_hash_gadget<FieldT> crh_old_1(pb, SHA256_block_size, input_old_1, leaf_digest_1, "crh_old_1");
@@ -196,12 +255,12 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     /* Setting the public input*/
     // The first 4*256 bits assigned to the protoboard which are root_digest, cm_new_digest, eol_old_1_digest, and eol_old_2_digest
     // These are determined as public inputs */
-    pb.set_input_sizes(digest_len * 4);
+    pb.set_input_sizes(2 * 4);
 
     std::cout << "/* --- Trusted Setup : Generating the CRS (keypar) --- */" << std::endl;
     /* Trusted Setup : Generating the CRS (keypar) */
 
-    // comparator.generate_r1cs_constraints();
+    sum_comparator.generate_r1cs_constraints();
     crh_old_1.generate_r1cs_constraints();
     crh_old_2.generate_r1cs_constraints();
     crh_new.generate_r1cs_constraints();
@@ -220,7 +279,7 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     this->keypair.vk = keypair.vk;
 
     const size_t num_constraints = pb.num_constraints();
-    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) * 2 + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) * 5; // for the comparison
+    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) * 2 + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) * 5 + 8 + 1; // for the comparison
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints)
@@ -247,6 +306,7 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     PKsig_input_new.fill_with_bits(pb, PKsig_input_bits_new);
     rho_input_new.fill_with_bits(pb, rho_input_bits_new);
 
+
     libff::bit_vector input_bits_old_1(q_input_bits_old_1);
     input_bits_old_1.insert(input_bits_old_1.end(), PKsig_input_bits_old_1.begin(), PKsig_input_bits_old_1.end());
     input_bits_old_1.insert(input_bits_old_1.end(), rho_input_bits_old_1.begin(), rho_input_bits_old_1.end());
@@ -270,18 +330,24 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     libff::bit_vector leaf_cm_old_bits_1 = HashT::get_hash(input_bits_old_1);
     libff::bit_vector leaf_cm_old_bits_2 = HashT::get_hash(input_bits_old_2);
 
+    for (size_t i = 0; i < 128; ++i)
+    {
+        pb.val(root_128bit_1) += root[i] ? libff::power<FieldT>(2, i) : 0;
+        pb.val(root_128bit_2) += root[i + 128] ? libff::power<FieldT>(2, i) : 0;
+
+        pb.val(cm_new_128bit_1) += cm_new[i] ? libff::power<FieldT>(2, i) : 0;
+        pb.val(cm_new_128bit_2) += cm_new[i + 128] ? libff::power<FieldT>(2, i) : 0;
+
+        pb.val(eol_old_1_128bit_1) += eol_old_1[i] ? libff::power<FieldT>(2, i) : 0;
+        pb.val(eol_old_1_128bit_2) += eol_old_1[i + 128] ? libff::power<FieldT>(2, i) : 0;
+
+        pb.val(eol_old_2_128bit_1) += eol_old_2[i] ? libff::power<FieldT>(2, i) : 0;
+        pb.val(eol_old_2_128bit_2) += eol_old_2[i + 128] ? libff::power<FieldT>(2, i) : 0;
+    }
+
+
     if (HashT::get_hash(input_bits_new) == cm_new){
         std::cout << "NO Error!" << std::endl;
-        std:: cout << "cm_new: ";
-        for (size_t i{0}; i < digest_len; i++)
-            std:: cout  << cm_new[i] ;
-        std::cout << std::endl;
-
-        libff::bit_vector  hash = HashT::get_hash(input_bits_new);
-        std:: cout << "cm_new: ";
-        for (size_t i{0}; i < digest_len; i++)
-            std:: cout  << hash[i] ;
-        std::cout << std::endl;
     } else {
         std::cout << " Error!" << std::endl;
     }
@@ -305,14 +371,6 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     assert(address_bits_va_2.get_field_element_from_bits(pb).as_ulong() == address_2);
 
     leaf_digest_1.generate_r1cs_witness(leaf_cm_old_bits_1);
-
-    // if (leaf_digest_1.bits.get_bits(pb))
-
-    std:: cout << "computed leaf_1: ";
-    for (size_t i{0}; i < digest_len; i++)
-        std:: cout  << leaf_digest_1.bits.get_bits(pb)[i] ;
-    std::cout << std::endl;
-
     leaf_digest_2.generate_r1cs_witness(leaf_cm_old_bits_2);
 
     input_old_1.generate_r1cs_witness(input_bits_old_1);
@@ -362,15 +420,7 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     }
 
 
-
-    // std::cout << "ml_1.computed_root.bits.get_bits()" << ml_1.root.bits.get_bits(pb)[0] << std::endl;
-
     // // /* make sure that read checker didn't accidentally overwrite anything */
-    root_digest.generate_r1cs_witness(root);
-    cm_new_digest.generate_r1cs_witness(cm_new);
-    eol_old_1_digest.generate_r1cs_witness(eol_old_1);
-    eol_old_2_digest.generate_r1cs_witness(eol_old_2);
-
     address_bits_va_1.fill_with_bits(pb, address_bits_1);
     address_bits_va_2.fill_with_bits(pb, address_bits_2);
 
@@ -395,6 +445,12 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
 
     path_var_1.generate_r1cs_witness(address_1, path_1);
     path_var_2.generate_r1cs_witness(address_2, path_2);
+
+    root_digest.generate_r1cs_witness(root);
+    cm_new_digest.generate_r1cs_witness(cm_new);
+    eol_old_1_digest.generate_r1cs_witness(eol_old_1);
+    eol_old_2_digest.generate_r1cs_witness(eol_old_2);
+
 
     assert(pb.is_satisfied());
 
@@ -443,6 +499,8 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     const size_t digest_len = HashT::get_digest_len();
     const size_t q_len = 64;
     const size_t rho_len = 192;
+    const size_t tree_depth = this->tree_depth;
+
 
     q_input_bits_old_1[0] = 0; // the offset is to prevent overflow
     std::generate(q_input_bits_old_1.begin() + 1, q_input_bits_old_1.end(), [&]()
@@ -474,22 +532,20 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     }
     q_input_bits_new[0] = carry_bit;
 
-    // std:: cout << "q_input_bits_old_1: ";
-    // for (size_t i{0}; i < q_len; i++)
-    //     std:: cout  << q_input_bits_old_1[i] ;
-    // std::cout << std::endl;
+    std:: cout << "q_input_bits_old_1: ";
+    for (size_t i{0}; i < q_len; i++)
+        std:: cout  << q_input_bits_old_1[i] ;
+    std::cout << std::endl;
 
-    // std:: cout << "q_input_bits_old_2: ";
-    // for (size_t i{0}; i < q_len; i++)
-    //     std:: cout  << q_input_bits_old_2[i] ;
-    // std::cout << std::endl;
+    std:: cout << "q_input_bits_old_2: ";
+    for (size_t i{0}; i < q_len; i++)
+        std:: cout  << q_input_bits_old_2[i] ;
+    std::cout << std::endl;
 
-    // std:: cout << "q_input_bits_new: ";
-    // for (size_t i{0}; i < q_len; i++)
-    //     std:: cout  << q_input_bits_new[i] ;
-    // std::cout << std::endl;
-
-    
+    std:: cout << "q_input_bits_new: ";
+    for (size_t i{0}; i < q_len; i++)
+        std:: cout  << q_input_bits_new[i] ;
+    std::cout << std::endl;
 
 
     libff::bit_vector input_bits_old_1(q_input_bits_old_1);
@@ -688,7 +744,6 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
         block_1.insert(computed_is_right_1 ? block_1.begin() : block_1.end(), path_1[level].begin(), path_1[level].end());
         block_2.insert(computed_is_right_2 ? block_2.begin() : block_2.end(), path_2[level].begin(), path_2[level].end());
 
-        // std:: cout << "Here! " << std::endl;
         // // DEBUGGING
         // std:: cout << "block_1: ";
         // for (size_t j{0}; j < 2*digest_len; j++)
@@ -717,29 +772,7 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
         std::cout << std::endl;
 
 
-//     prev_hash_2 = leaf_2;
-
-//     for (long level = tree_depth - 1; level >= 0; level--){
-
-//         // std::cout<<"level: "<<level<<std::endl;
-//         libff::bit_vector block = prev_hash_2;
-//         bool computed_is_right = !address_bits_2[level];
-//         block.insert(computed_is_right ? block.end() : block.begin(), path_2[level].begin(), path_2[level].end());
-//         libff::bit_vector h = HashT::get_hash(block);
-//         prev_hash_2 = h;
-//         // std::cout<<"level: "<<level<<std::endl;
-//     }
-    
-
-
-
     cm_new = HashT::get_hash(input_bits_new);
-    // std::cout<<"Here2"<<std::endl;
-
-    // libff::bit_vector rho_input_bits_old(input_bits_old.begin() + q_len + PKsig_len, input_bits_old.begin() + q_len + PKsig_len + rho_len );
-    // libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
-    // rho_input_bits_old.insert(rho_input_bits_old.begin(), zero_padding_rho_bits.begin(), zero_padding_rho_bits.end());
-    // eol_old =  HashT::get_hash(rho_input_bits_old);
     
     libff::bit_vector zero_padding_rho_bits(SHA256_block_size - rho_len, 0);
 
@@ -749,11 +782,6 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     libff::bit_vector rho_input_bits_old_padded_2(zero_padding_rho_bits);
     rho_input_bits_old_padded_2.insert(rho_input_bits_old_padded_2.end(), rho_input_bits_old_2.begin(), rho_input_bits_old_2.end());
 
-    // libff::bit_vector rho_input_bits_old_padded_2;
-    // rho_input_bits_old_padded_2.push_back(zero_padding_rho_bits);
-    // rho_input_bits_old_padded_2.push_back(rho_input_bits_old_1);
-
-    // rho_input_bits_old_1.insert(rho_input_bits_old.begin(), zero_padding_rho_bits.begin(), zero_padding_rho_bits.end());
     eol_old_1 = HashT::get_hash(rho_input_bits_old_padded_1);
     eol_old_2 = HashT::get_hash(rho_input_bits_old_padded_2);
 
@@ -777,5 +805,3 @@ void MergeCircuit<FieldT, HashT, ppT>::generate_random_inputs(
         std:: cout  << eol_old_2[i] ;
     std::cout << std::endl;
 }
-
-// #endif

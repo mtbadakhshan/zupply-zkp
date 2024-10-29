@@ -62,17 +62,19 @@ void save_proof(r1cs_gg_ppzksnark_proof<ppT> proof, r1cs_primary_input<FieldT> p
 
 template<typename FieldT, typename HashT, typename ppT>
 void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
-    std::ofstream pk_bin, vk_bin, vk_dec;
+    std::ofstream pk_bin, vk_bin, vk_dec, r1cs;
 
     pk_bin.open(path + "pk.bin", std::ios::out | std::ios::binary);
     vk_bin.open(path + "vk.bin", std::ios::out | std::ios::binary);
-    // vk_hex.open(path + "pk.bin", std::ios::out | std::ios::binary);
+    r1cs.open(path + "r1cs",   std::ios::out);
 
-    if (pk_bin.is_open() & vk_bin.is_open()){
+    if (pk_bin.is_open() & vk_bin.is_open() & r1cs.is_open()){
         pk_bin << circuit.get_keypair().pk;
         vk_bin << circuit.get_keypair().vk;
+        r1cs << circuit.get_r1cs_constraints();
         pk_bin.close();
         vk_bin.close();
+        r1cs.close();
     }
     else {
         std::cout<< "Failed to open the file";
@@ -127,4 +129,7 @@ void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
         vk_dec << "(" << gamma_ABC_g1_rest_affine_coordinates.coord[0].toString(10) << ", " << gamma_ABC_g1_rest_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
     }
     vk_dec.close();
+
+
+    
 }

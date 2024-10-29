@@ -15,7 +15,7 @@
 /* -------- AuthCircuit ------------------------------------------------------------------------------------------------- */
 /* ====================================================================================================================== */
 template <typename FieldT, typename HashT, typename ppT>
-AuthCircuit<FieldT, HashT, ppT>::AuthCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
+AuthCircuit<FieldT, HashT, ppT>::AuthCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name, tree_depth)
 {
 
     std::cout << "/* --- AuthCircuit --- */" << std::endl;
@@ -56,6 +56,8 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     const size_t q_len = 64;
     const size_t PKsig_len = 256;
     const size_t rho_len = 192;
+    const size_t tree_depth = this->tree_depth;
+
 
     /* Make a Protoboard */
     protoboard<FieldT> pb;
@@ -218,6 +220,8 @@ void AuthCircuit<FieldT, HashT, ppT>::generate_random_inputs(libff::bit_vector &
     /* Generating random input */
     // In actual implementation it should be generated secretly and passed by the user.
     const size_t digest_len = HashT::get_digest_len();
+    const size_t tree_depth = this->tree_depth;
+
     std::generate(input_bits.begin(), input_bits.end(), [&]()
                   { return std::rand() % 2; });
     libff::bit_vector leaf = HashT::get_hash(input_bits);

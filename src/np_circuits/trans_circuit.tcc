@@ -15,7 +15,7 @@
 /* -------- TransCircuit ------------------------------------------------------------------------------------------------ */
 /* ====================================================================================================================== */
 template <typename FieldT, typename HashT, typename ppT>
-TransCircuit<FieldT, HashT, ppT>::TransCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name), tree_depth(tree_depth)
+TransCircuit<FieldT, HashT, ppT>::TransCircuit(const std::string &name, const size_t tree_depth) : Circuit<FieldT, HashT, ppT>(name, tree_depth)
 {
 
     std::cout << "/* --- TransCircuit --- */" << std::endl;
@@ -73,6 +73,8 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
     const size_t q_len = 64;
     const size_t PKsig_len = 256;
     const size_t rho_len = 192;
+    const size_t tree_depth = this->tree_depth;
+
     // const size_t block_len = HashT::get_block_len();
 
     /* Make a Protoboard */
@@ -208,7 +210,7 @@ void TransCircuit<FieldT, HashT, ppT>::setup(
     this->keypair.vk = keypair.vk;
 
     const size_t num_constraints = pb.num_constraints();
-    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size) + 64 + 6; // for the comparison
+    const size_t expected_constraints = merkle_tree_check_read_gadget<FieldT, HashT>::expected_constraints(tree_depth) + sha256_two_to_one_hash_gadget<FieldT>::expected_constraints(SHA256_block_size)*3 + 6 + 1; // for the comparison
     assert(num_constraints == expected_constraints);
 
     if (num_constraints != expected_constraints)
@@ -341,6 +343,8 @@ void TransCircuit<FieldT, HashT, ppT>::generate_random_inputs(
     const size_t q_len = 64;
     const size_t PKsig_len = 256;
     const size_t rho_len = 192;
+    const size_t tree_depth = this->tree_depth;
+
 
     std::generate(input_bits_old.begin(), input_bits_old.end(), [&]()
                   { return std::rand() % 2; });
