@@ -213,7 +213,7 @@ Verifing:!
   (leave) Call to r1cs_gg_ppzksnark_online_verifier_strong_IC	[0.0018s x1.00]	(225.1445s x0.99 from start)
 (leave) Call to r1cs_gg_ppzksnark_verifier_strong_IC	[0.0022s x1.00]	(225.1445s x0.99 from start)
 FOR SUCCESSFUL VERIFICATION
-FieldT::capacity(): 253
+FieldT::floor_size_in_bits(): 253
 Verification Key Size: 
 * G1 elements in VK: 1024
 * G2 elements in VK: 2

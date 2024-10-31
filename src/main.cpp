@@ -101,7 +101,7 @@ void proof_auth()
     std::cout << "FOR SUCCESSFUL VERIFICATION" << std::endl;
     // std::cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << std::endl;
     // std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
-    std::cout << "FieldT::capacity(): " << FieldT::capacity() << std::endl; 
+    std::cout << "FieldT::floor_size_in_bits(): " << FieldT::floor_size_in_bits() << std::endl; 
     std::cout << "Verification Key Size: " << std::endl;
     circuit.get_keypair().vk.print_size();
     

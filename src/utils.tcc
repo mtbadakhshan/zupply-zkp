@@ -38,20 +38,20 @@ void save_proof(r1cs_gg_ppzksnark_proof<ppT> proof, r1cs_primary_input<FieldT> p
     proof_dec << "g_A: " << std::endl;
     libff::G1<ppT> proof_g1A_affine_coordinates(proof.g_A);
     proof_g1A_affine_coordinates.to_affine_coordinates();
-    proof_dec << "(" << proof_g1A_affine_coordinates.coord[0].toString(10) << ", " << proof_g1A_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    proof_dec << "(" << proof_g1A_affine_coordinates.X.toString(10) << ", " << proof_g1A_affine_coordinates.Y.toString(10) << ")" << std::endl;
     // proof.g_A.print();
 
     proof_dec << "g_B: " << std::endl;
     libff::G2<ppT> proof_g2B_affine_coordinates(proof.g_B);
     proof_g2B_affine_coordinates.to_affine_coordinates();
-    proof_dec << "(" << proof_g2B_affine_coordinates.coord[0].toString(10) << ", " << proof_g2B_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    proof_dec << "(" << proof_g2B_affine_coordinates.X.toString(10) << ", " << proof_g2B_affine_coordinates.Y.toString(10) << ")" << std::endl;
     proof.g_B.print();
 
 
     proof_dec << "g_C: " << std::endl;
      libff::G1<ppT> proof_g1C_affine_coordinates(proof.g_C);
     proof_g1C_affine_coordinates.to_affine_coordinates();
-    proof_dec << "(" << proof_g1C_affine_coordinates.coord[0].toString(10) << ", " << proof_g1C_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    proof_dec << "(" << proof_g1C_affine_coordinates.X.toString(10) << ", " << proof_g1C_affine_coordinates.Y.toString(10) << ")" << std::endl;
     // proof.g_C.print();
 
     proof_dec << "Primary (public) inputs: " << primary_input << std::endl;
@@ -94,29 +94,29 @@ void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
     vk_dec<< "alpha_g1: " << std::endl;
     libff::G1<ppT> alpha_g1_affine_coordinates(circuit.get_keypair().pk.alpha_g1);
     alpha_g1_affine_coordinates.to_affine_coordinates();
-    vk_dec << "(" << alpha_g1_affine_coordinates.coord[0].toString(10) << ", " << alpha_g1_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    vk_dec << "(" << alpha_g1_affine_coordinates.X.toString(10) << ", " << alpha_g1_affine_coordinates.Y.toString(10) << ")" << std::endl;
 
 
     vk_dec<< "beta_g2: " << std::endl;
     libff::G2<ppT> beta_g2_affine_coordinates(circuit.get_keypair().pk.beta_g2);
     beta_g2_affine_coordinates.to_affine_coordinates();
-    vk_dec << "(" << beta_g2_affine_coordinates.coord[0].toString(10) << ", " << beta_g2_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    vk_dec << "(" << beta_g2_affine_coordinates.X.toString(10) << ", " << beta_g2_affine_coordinates.Y.toString(10) << ")" << std::endl;
 
     vk_dec<< "gamma_g2: " << std::endl;
     libff::G2<ppT> gamma_g2_affine_coordinates(circuit.get_keypair().vk.gamma_g2);
     gamma_g2_affine_coordinates.to_affine_coordinates();
-    vk_dec << "(" << gamma_g2_affine_coordinates.coord[0].toString(10) << ", " << gamma_g2_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    vk_dec << "(" << gamma_g2_affine_coordinates.X.toString(10) << ", " << gamma_g2_affine_coordinates.Y.toString(10) << ")" << std::endl;
 
     vk_dec<< "delta_g2: " << std::endl;
     libff::G2<ppT> delta_g2_affine_coordinates(circuit.get_keypair().vk.delta_g2);
     delta_g2_affine_coordinates.to_affine_coordinates();
-    vk_dec << "(" << delta_g2_affine_coordinates.coord[0].toString(10) << ", " << delta_g2_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    vk_dec << "(" << delta_g2_affine_coordinates.X.toString(10) << ", " << delta_g2_affine_coordinates.Y.toString(10) << ")" << std::endl;
 
     vk_dec<< "gamma_ABC_g1: " << std::endl;
     vk_dec << " * first: " << std::endl;
     libff::G1<ppT> gamma_ABC_g1_affine_coordinates(circuit.get_keypair().vk.gamma_ABC_g1.first);
     gamma_ABC_g1_affine_coordinates.to_affine_coordinates();
-    vk_dec << "(" << gamma_ABC_g1_affine_coordinates.coord[0].toString(10) << ", " << gamma_ABC_g1_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+    vk_dec << "(" << gamma_ABC_g1_affine_coordinates.X.toString(10) << ", " << gamma_ABC_g1_affine_coordinates.Y.toString(10) << ")" << std::endl;
     
 
     for (size_t i = 0; i < circuit.get_primary_input().size(); ++i){
@@ -126,7 +126,7 @@ void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
         
         libff::G1<ppT> gamma_ABC_g1_rest_affine_coordinates(circuit.get_keypair().vk.gamma_ABC_g1.rest.values[i]);
         gamma_ABC_g1_rest_affine_coordinates.to_affine_coordinates();
-        vk_dec << "(" << gamma_ABC_g1_rest_affine_coordinates.coord[0].toString(10) << ", " << gamma_ABC_g1_rest_affine_coordinates.coord[1].toString(10) << ")" << std::endl;
+        vk_dec << "(" << gamma_ABC_g1_rest_affine_coordinates.X.toString(10) << ", " << gamma_ABC_g1_rest_affine_coordinates.Y.toString(10) << ")" << std::endl;
     }
     vk_dec.close();
 
