@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(libsnark-tutorial)
+project(zupply)
+
+# cmake_policy(SET CMP0002 NEW)  # Removes name conflict errors
+# cmake_policy(SET CMP0079 NEW)  # Allows linking targets across directories
+
 
 set(
   CURVE
