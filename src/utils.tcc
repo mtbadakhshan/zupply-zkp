@@ -5,13 +5,13 @@
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
+#include <cstddef>
 #ifndef UTILS_HPP
 #error "utils.tcc should not be included directly. Include utils.hpp instead."
 #endif
 
 #include "utils.hpp"
 
-// using namespace libsnark;
 
 template<typename FieldT, typename HashT, typename ppT>
 void save_proof(r1cs_gg_ppzksnark_proof<ppT> proof, r1cs_primary_input<FieldT> primary_input, const std::string path){
@@ -59,6 +59,22 @@ void save_proof(r1cs_gg_ppzksnark_proof<ppT> proof, r1cs_primary_input<FieldT> p
     proof_dec.close();
 
 }
+
+template<typename FieldT, typename hash_type>
+void save_proof(libiop::aurora_snark_argument<FieldT, hash_type> proof, r1cs_primary_input<FieldT> primary_input, const std::string path){
+    std::ofstream proof_dec;
+
+    proof_dec.open(path + "_argument.dec", std::ios::out | std::ios::binary);
+    if (proof_dec.is_open()){
+        proof.serialize(proof_dec);
+        proof_dec.close();
+    }
+    else {
+        std::cout<< "Failed to open the file";
+        std::exit(EXIT_FAILURE);
+    }
+}
+
 
 template<typename FieldT, typename HashT, typename ppT>
 void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
@@ -132,4 +148,48 @@ void save_pp(Circuit<FieldT, HashT, ppT> circuit, std::string path){
 
 
     
+}
+
+
+template<typename FieldT>
+libiop::r1cs_constraint_system<FieldT> convert_libsnark_to_libiop(r1cs_constraint_system<FieldT> libsnart_r1cs){
+    libiop::r1cs_constraint_system<FieldT> libiop_r1cs;
+    libiop_r1cs.primary_input_size_ = libsnart_r1cs.primary_input_size;
+    libiop_r1cs.auxiliary_input_size_ = libsnart_r1cs.auxiliary_input_size;
+
+    size_t num_variables = libiop_r1cs.primary_input_size_ + libiop_r1cs.auxiliary_input_size_;
+
+    for (r1cs_constraint<FieldT> libsnark_constraint: libsnart_r1cs.constraints){
+        std::vector<libiop::linear_combination<FieldT>> m_libiop (3); // a, b, and c matrix
+
+        size_t cnt = 0;
+        for (linear_combination<FieldT> m_libsnark: {libsnark_constraint.a, libsnark_constraint.b, libsnark_constraint.c}){
+            for (linear_term<FieldT> libsnark_linear_term: m_libsnark){
+                m_libiop[cnt].add_term(libiop::variable<FieldT>(libsnark_linear_term.index),
+                                       libsnark_linear_term.coeff);
+            }
+            if (!m_libiop[cnt].is_valid(num_variables)){
+
+                // std::cout <<  cnt  << " - m_libiop[cnt] : " << m_libsnark.is_valid(num_variables+1) << std::endl;
+            }
+            cnt ++;
+        }
+        libiop_r1cs.add_constraint(libiop::r1cs_constraint<FieldT> (m_libiop[0], m_libiop[1], m_libiop[2]));
+    }
+
+    size_t next_power_of_two = 1ull << libff::log2(libiop_r1cs.num_constraints());
+    size_t pad_amount = next_power_of_two - libiop_r1cs.num_constraints();
+    for (std::size_t i = 0; i < pad_amount; ++i){
+        libiop_r1cs.add_constraint(libiop::r1cs_constraint<FieldT> ());
+    }
+
+    std::cout << " number of variabels = " <<  libiop_r1cs.num_variables() <<
+                 " libff::is_power_of_2(num_variables + 1): " << libff::is_power_of_2(libiop_r1cs.num_variables() + 1) << std::endl;
+
+    libiop_r1cs.auxiliary_input_size_ += (1ull << libff::log2(num_variables + 1)) - (num_variables + 1) ;
+
+    std::cout << " number of variabels = " <<  libiop_r1cs.num_variables() <<
+                 " libff::is_power_of_2(num_variables + 1): " << libff::is_power_of_2(libiop_r1cs.num_variables() + 1) << std::endl;
+    
+    return libiop_r1cs;
 }

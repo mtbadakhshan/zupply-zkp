@@ -416,10 +416,10 @@ void DivCircuit<FieldT, HashT, ppT>::setup(libff::bit_vector root,
     }
     std::cout << "pb is satisfied!" << std::endl;
 
-
+    this->r1cs_constraints = pb.get_constraint_system();
+    std::cout << "R1CS constraints are assigned!" << std::endl;
     this->primary_input = pb.primary_input();
     std::cout << "Primary inputes are assigned!" << std::endl;
-
     this->auxiliary_input = pb.auxiliary_input();
     std::cout << "Auxiliary inputes are assigned!" << std::endl;
 

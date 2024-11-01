@@ -204,8 +204,13 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     input.generate_r1cs_witness(input_bits);
     assert(pb.is_satisfied());
 
+    this->r1cs_constraints = pb.get_constraint_system();
+    std::cout << "R1CS constraints are assigned!" << std::endl;
     this->primary_input = pb.primary_input();
+    std::cout << "Primary inputes are assigned!" << std::endl;
     this->auxiliary_input = pb.auxiliary_input();
+    std::cout << "Auxiliary inputes are assigned!" << std::endl;
+
 }
 
 /* --- GENERATE RANDOM INPUTS --- */

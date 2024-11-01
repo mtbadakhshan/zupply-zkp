@@ -59,6 +59,8 @@ target_link_libraries(
   circuit
   utils
   snark
+  iop
+  ff
 )
 target_include_directories(
   main
@@ -66,5 +68,7 @@ target_include_directories(
   PUBLIC
   ${DEPENDS_DIR}/libsnark
   ${DEPENDS_DIR}/libsnark/depends/libfqfft
+  ${DEPENDS_DIR}/libiop/
+  ${DEPENDS_DIR}/libff/
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
