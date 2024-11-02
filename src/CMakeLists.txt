@@ -61,6 +61,7 @@ target_link_libraries(
   snark
   iop
   ff
+  gtest
 )
 target_include_directories(
   main
@@ -70,5 +71,6 @@ target_include_directories(
   ${DEPENDS_DIR}/libsnark/depends/libfqfft
   ${DEPENDS_DIR}/libiop/
   ${DEPENDS_DIR}/libff/
+  ${DEPENDS_DIR}/libsnark/depends/googletest/include/
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
