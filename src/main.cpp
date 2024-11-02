@@ -102,7 +102,6 @@ void proof_auth()
     //// RUN IN LIBIOP ////
     libiop::r1cs_constraint_system<FieldT> libiop_r1cs = convert_libsnark_to_libiop<FieldT>(circuit.get_r1cs_constraints());
     std::cout << "libiop_r1cs.is_satisfied(): " <<  libiop_r1cs.is_satisfied(circuit.get_primary_input(), circuit.get_auxiliary_input()) << std::endl;
-`   
 
 
     // std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
