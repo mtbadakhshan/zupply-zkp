@@ -74,3 +74,35 @@ target_include_directories(
   ${DEPENDS_DIR}/libsnark/depends/googletest/include/
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+
+add_executable(run_benchmark benchmark.cpp)
+
+
+target_link_libraries(
+    run_benchmark 
+    PRIVATE 
+    
+    circuit
+    utils
+    snark
+    iop
+    ff
+    gtest
+    benchmark::benchmark
+)
+
+target_include_directories(
+    run_benchmark
+
+    PRIVATE
+    ${DEPENDS_DIR}/libsnark
+    ${DEPENDS_DIR}/libsnark/depends/libfqfft
+    ${DEPENDS_DIR}/libiop/
+    ${DEPENDS_DIR}/libff/
+    ${DEPENDS_DIR}/libsnark/depends/googletest/include/
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    depends/benchmark/include
+    .
+)
+

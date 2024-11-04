@@ -125,6 +125,11 @@ void MergeCircuit<FieldT, HashT, ppT>::setup(
     eol_old_2_128bit_1.allocate(pb, "eol_old_2_128bit_part1");
     eol_old_2_128bit_2.allocate(pb, "eol_old_2_128bit_part2");
 
+    /* Dummy Public Inputs for Aurora */
+    pb_variable_array<FieldT> dummy_variables;
+    dummy_variables.allocate(pb, 7, "dummy_variables"); // Size is 2^4 - #number_of_public_inputs(=8) - 1 = 7
+
+
     /* Connecting Public inputs */
     digest_variable<FieldT> root_digest(pb, digest_len, "root_digest");
     digest_variable<FieldT> cm_new_digest(pb, digest_len, "cm_new_digest");

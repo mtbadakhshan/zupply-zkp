@@ -5,44 +5,17 @@
  * @copyright  MIT license (see LICENSE file)
  *****************************************************************************/
 
-#ifdef CURVE_BN128
-#include <libff/algebra/curves/bn128/bn128_pp.hpp>
-#endif
 
+#include <iostream>
+#include <string>
+
+#include <libff/algebra/curves/bn128/bn128_pp.hpp>
 #include <libff/algebra/curves/public_params.hpp>
 #include <libff/algebra/curves/bn128/bn128_init.hpp>
 #include <libff/algebra/curves/bn128/bn128_g1.hpp>
 #include <libff/algebra/curves/bn128/bn_utils.hpp>
 
-
-// #include <libff/algebra/curves/public_params.hpp>
-// #ifdef CURVE_ALT_BN128
-// #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
-// #endif
-
-// #ifndef NDEBUG
-// #define NDEBUG
-
-#include <iostream>
-#include <fstream>
-#include <string>
-
 #include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_tree_check_read_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_tree_check_update_gadget.hpp>
-
-#include "depends/ate-pairing/include/bn.h"
-
-#include <libsnark/common/data_structures/merkle_tree.hpp>
-#include <libsnark/gadgetlib1/gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/crh_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/digest_selector_gadget.hpp>
-#include <libsnark/gadgetlib1/gadgets/hashes/hash_io.hpp>
-#include <libsnark/gadgetlib1/gadgets/merkle_tree/merkle_authentication_path_variable.hpp>
-
-// #include "libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
-// #include "libsnark/common/default_types/r1cs_ppzksnark_pp.hpp"
-
 
 #include "libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp"
 #include "libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp"
@@ -52,7 +25,6 @@
 #include <libiop/snark/aurora_snark.hpp>
 #include <libiop/protocols/ldt/ldt_reducer.hpp>
 
-#include <libff/algebra/fields/binary/gf128.hpp>
 
 #include "np_circuits/circuit.hpp"
 #include "utils.hpp"
@@ -66,10 +38,10 @@ template<typename FieldT, typename HashT, typename ppT>
 void proof_auth()
 {
     std::srand ( std::time(NULL) ); 
-    std::string circuit_type = "DivCircuit";
-    const size_t tree_depth = 20;
+    std::string circuit_type = "AuthCircuit";
+    const size_t tree_depth = 3;
 
-    DivCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
+    AuthCircuit<FieldT, HashT, ppT> circuit(circuit_type, tree_depth);
     
     // if (circuit_type.compare("AuthCircuit") == 0)
     //     AuthCircuit<FieldT, HashT, ppT> circuit("circuit", tree_depth);
@@ -93,25 +65,58 @@ void proof_auth()
                                                                         circuit.get_primary_input(),
                                                                         circuit.get_auxiliary_input());
 
-    save_proof<FieldT, HashT, ppT>(proof,  circuit.get_primary_input(), path);
+    // save_proof<FieldT, HashT, ppT>(proof,  circuit.get_primary_input(), path);
     printf("Verifing:!\n");
     bool verified = r1cs_gg_ppzksnark_verifier_strong_IC<ppT>(circuit.get_keypair().vk, 
                                                                         circuit.get_primary_input(), 
                                                                         proof);
 
     //// RUN IN LIBIOP ////
-    libiop::r1cs_constraint_system<FieldT> libiop_r1cs = convert_libsnark_to_libiop<FieldT>(circuit.get_r1cs_constraints());
+    libiop::r1cs_primary_input<FieldT> primary_input = circuit.get_primary_input();
+	libiop::r1cs_auxiliary_input<FieldT> auxiliary_input = circuit.get_auxiliary_input();
+    libiop::r1cs_constraint_system<FieldT> libiop_r1cs = convert_libsnark_to_libiop<FieldT>(circuit.get_r1cs_constraints(), primary_input, auxiliary_input);
+
+
     std::cout << "libiop_r1cs.is_satisfied(): " <<  libiop_r1cs.is_satisfied(circuit.get_primary_input(), circuit.get_auxiliary_input()) << std::endl;
+    
+    // std::cout << "circuit.get_primary_input(): " <<  circuit.get_primary_input() << std::endl;
+    // std::cout << "circuit.get_primary_input().size(): " <<  circuit.get_primary_input().size() << std::endl;
+    // std::cout << "primary_input: " <<  primary_input << std::endl;
+    // std::cout << "libiop_r1cs.num_inputs(): " <<  libiop_r1cs.num_inputs() << std::endl;
 
+    
+    typedef libiop::binary_hash_digest hash_type;
+    libiop::aurora_snark_parameters<FieldT, hash_type> params = generate_aurora_parameters<FieldT, hash_type>(libiop_r1cs);
+    const libiop::aurora_snark_argument<FieldT, hash_type> argument = libiop::aurora_snark_prover<FieldT>(  libiop_r1cs,
+                                                                                                            primary_input,
+                                                                                                            auxiliary_input,
+                                                                                                            params);
 
-    // std::cout << "Number of inputs: " << pb.num_inputs() << std::endl;
+    const bool bit = libiop::aurora_snark_verifier<FieldT>( libiop_r1cs,
+                                                            primary_input,
+                                                            argument,
+                                                            params);
+
     std::cout << "FieldT::floor_size_in_bits(): " << FieldT::floor_size_in_bits() << std::endl; 
+    std::cout << "FieldT::num_bits: " << FieldT::num_bits << std::endl; 
     std::cout << "Verification Key Size: " << std::endl;
     circuit.get_keypair().vk.print_size();
     std::cout << "circuit.get_primary_input().size(): " << circuit.get_primary_input().size() << std::endl;
-    std::cout << "Verification status: " << verified << std::endl;
+    std::cout << "Verification status: " << verified << bit << std::endl;
 
 
+    std::cout << "libsnark proof size_in_bits() :" << proof.size_in_bits() << " bits" << std::endl;
+    std::cout << "libiop_r1cs.size_in_bytes()   :" << libiop_r1cs.size_in_bytes() << " bytes" << std::endl;
+    std::cout << "argument.size_in_bytes()      :" << argument.size_in_bytes() << " bytes" << std::endl;
+    std::cout << "circuit.get_primary_input().size() in bits: " << circuit.get_primary_input().size() 
+                                                                << " * " << FieldT::num_bits 
+                                                                << " = " << circuit.get_primary_input().size() * FieldT::num_bits
+                                                                << std::endl;
+    
+    std::cout << "primary_input in bits: "  << primary_input.size() 
+                                            << " * " << FieldT::num_bits 
+                                            << " = " << primary_input.size() * FieldT::num_bits
+                                            << std::endl;
 
 
 }
@@ -157,38 +162,14 @@ int libiop_example(){
     libiop::r1cs_constraint_system<FieldT> libiop_r1cs = convert_libsnark_to_libiop<FieldT>(libsnart_r1cs);
 
     std::cout << "libiop_r1cs.is_valid(): " <<  libiop_r1cs.is_valid() << std::endl;
-    // std::cout << "pb.primary_input(): " <<  pb.primary_input() << std::endl;
-    // std::cout << "pb.auxiliary_input(): " <<  pb.auxiliary_input() << std::endl;
+    std::cout << "pb.primary_input(): " <<  pb.primary_input() << std::endl;
+    std::cout << "pb.primary_input(): " <<  pb.primary_input() << std::endl;
+    std::cout << "libsnart_r1cs.constraints: " <<  libsnart_r1cs.constraints.num_inputs() << std::endl;
 
     std::cout << "libiop_r1cs.is_satisfied(): " <<  libiop_r1cs.is_satisfied(pb.primary_input(), pb.auxiliary_input()) << std::endl;
 
-    
     typedef libiop::binary_hash_digest hash_type;
-    const size_t num_constraints = libiop_r1cs.num_constraints();
-    const size_t num_inputs = libiop_r1cs.num_inputs();
-    const size_t num_variables = libiop_r1cs.num_variables();
-    const size_t security_parameter = 128;
-    const size_t RS_extra_dimensions = 2;
-    const size_t FRI_localization_parameter = 3;
-    const libiop::LDT_reducer_soundness_type ldt_reducer_soundness_type = libiop::LDT_reducer_soundness_type::optimistic_heuristic;
-    const libiop::FRI_soundness_type fri_soundness_type = libiop::FRI_soundness_type::heuristic;
-    const libiop::field_subset_type domain_type = libiop::multiplicative_coset_type;
-
-    /* Actual SNARK test */
-    const bool make_zk = true;
-    libiop::aurora_snark_parameters<FieldT, hash_type> params(
-        security_parameter,
-        ldt_reducer_soundness_type,
-        fri_soundness_type,
-        libiop::blake2b_type,
-        FRI_localization_parameter,
-        RS_extra_dimensions,
-        make_zk,
-        domain_type,
-        num_constraints,
-        num_variables);
-
-    std::cout << "here! 1" << std::endl;
+    libiop::aurora_snark_parameters<FieldT, hash_type> params = generate_aurora_parameters<FieldT, hash_type>(libiop_r1cs);
 
     const libiop::aurora_snark_argument<FieldT, hash_type> argument = libiop::aurora_snark_prover<FieldT>(
         libiop_r1cs,

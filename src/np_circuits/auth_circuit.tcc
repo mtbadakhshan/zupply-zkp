@@ -69,21 +69,14 @@ void AuthCircuit<FieldT, HashT, ppT>::setup(
     root_128bit_1.allocate(pb, "root_128bit_part1");
     root_128bit_2.allocate(pb, "root_128bit_part2");
 
+    /* Dummy Public Inputs for Aurora */
+    pb_variable_array<FieldT> dummy_variables;
+    dummy_variables.allocate(pb, 1, "dummy_variables"); // Size is 2^2 - #number_of_public_inputs(=2) - 1 = 1
 
-    // pb_variable<FieldT> root_256bit;
-    // root_256bit.allocate(pb, "root_256bit");
 
     /* Connecting Public inputs */
 
     digest_variable<FieldT> root_digest(pb, digest_len, "output_digest");
-
-    // linear_combination<FieldT> root_256bit_lc;
-    // for (size_t i = 0; i < 256; ++i)
-    // {
-    //     root_256bit_lc.add_term(root_digest.bits[i], libff::power<FieldT>(2, i));
-    // }
-
-    // pb.add_r1cs_constraint(r1cs_constraint<FieldT>(root_256bit_lc, FieldT::one(), root_256bit), "Root part 1 Constraints");
 
     linear_combination<FieldT> root_128bit_lc_1, root_128bit_lc_2;
 
