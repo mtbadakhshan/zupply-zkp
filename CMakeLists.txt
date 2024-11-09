@@ -4,13 +4,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(zupply)
 
-# cmake_policy(SET CMP0002 NEW)  # Removes name conflict errors
-# cmake_policy(SET CMP0079 NEW)  # Allows linking targets across directories
-
-
 set(
   CURVE
-  "BN128"
+  "BLS12_381"
   CACHE
   STRING
   "Default curve: one of ALT_BN128, BN128, EDWARDS, MNT4, MNT6"

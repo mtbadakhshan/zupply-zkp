@@ -65,19 +65,22 @@ Fetch dependencies from their GitHub repos:
 
 Next, initialize the build directory.
 
-    $ mkdir build && cd build && cmake ..
+    $ mkdir build && cd build && cmake -DCURVE={CURVE} ..
 
-Lastly, compile the library.
+Where in our implementation, CURVE is either BLS12_381 or BN128. Lastly, compile the library.
 
     $ make
 
 ## Running
-use the following command from the ``build`` directory:
+use the following command from the ``build`` directory to run the example of using the zupply circuits:
 
     $ ./src/main
+
+To run the benchmark, you can use the following command to run the benchmark in src directory. You can adjust the parameters.
+
+    $ python plot_benchmark.py
+
 
 ## Acknowledgment
 I followed the instruction on https://github.com/howardwu/libsnark-tutorial
 
-
-Personal notes: You should create keys directory and all of its sub directories.

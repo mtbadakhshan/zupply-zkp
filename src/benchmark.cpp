@@ -2,11 +2,19 @@
 #include <cstdlib>
 #include <chrono>
 
+#ifdef CURVE_BLS12_381
+#include <libff/algebra/curves/bn128/bn128_pp.hpp>
+#include <libff/algebra/curves/bls12_381/bls12_381_pp.hpp>
+#endif
+
+
+#ifdef CURVE_BN128
 #include <libff/algebra/curves/bn128/bn128_pp.hpp>
 #include <libff/algebra/curves/public_params.hpp>
 #include <libff/algebra/curves/bn128/bn128_init.hpp>
-#include <libff/algebra/curves/bn128/bn128_g1.hpp>
 #include <libff/algebra/curves/bn128/bn_utils.hpp>
+#endif
+
 
 #include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
 
@@ -24,9 +32,19 @@
 #include "utils.hpp"
 
 
+#ifdef CURVE_BLS12_381
+// libff::bls12_381_pp::init_public_params();
+typedef libff::Fr<libff::bls12_381_pp> FieldT;
+typedef libff::bls12_381_pp ppT;
+#endif
+
+
+#ifdef CURVE_BN128
 typedef libff::Fr<libff::bn128_pp> FieldT;
-typedef libsnark::sha256_two_to_one_hash_gadget<FieldT> HashT;
 typedef libff::bn128_pp ppT;
+#endif
+
+typedef libsnark::sha256_two_to_one_hash_gadget<FieldT> HashT;
 typedef libiop::binary_hash_digest hash_type;
 
 // Benchmark for Libsnark Prover -----------------------------------------------------------------------------------------------------------------------
@@ -36,7 +54,7 @@ static void BM_PROVER_LIBSNARK(benchmark::State &state)
     const size_t circuit_selector = state.range(1);
 
     libff::start_profiling();
-    libff::bn128_pp::init_public_params();
+    ppT::init_public_params();
     std::srand ( std::time(NULL) );
 
     std::unique_ptr<Circuit<FieldT, HashT, ppT>> circuit = selectCircuit<FieldT, HashT, ppT>(circuit_selector, tree_depth);
@@ -63,7 +81,7 @@ static void BM_VERIFIER_LIBSNARK(benchmark::State &state)
     const size_t circuit_selector = state.range(1);
 
     libff::start_profiling();
-    libff::bn128_pp::init_public_params();
+    ppT::init_public_params();
 
     std::srand ( std::time(NULL) );
 
@@ -90,7 +108,7 @@ static void BM_PROVER_LIBIOP(benchmark::State &state)
     const size_t circuit_selector = state.range(1);
 
     libff::start_profiling();
-    libff::bn128_pp::init_public_params();
+    ppT::init_public_params();
     std::srand ( std::time(NULL) );
 
     std::unique_ptr<Circuit<FieldT, HashT, ppT>> circuit = selectCircuit<FieldT, HashT, ppT>(circuit_selector, tree_depth);
@@ -124,7 +142,7 @@ static void BM_VERIFIER_LIBIOP(benchmark::State &state)
     const size_t circuit_selector = state.range(1);
 
     libff::start_profiling();
-    libff::bn128_pp::init_public_params();
+    ppT::init_public_params();
     std::srand ( std::time(NULL) );
 
     std::unique_ptr<Circuit<FieldT, HashT, ppT>> circuit = selectCircuit<FieldT, HashT, ppT>(circuit_selector, tree_depth);

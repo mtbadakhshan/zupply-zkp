@@ -9,11 +9,20 @@
 #include <iostream>
 #include <string>
 
+#ifdef CURVE_BLS12_381
 #include <libff/algebra/curves/bn128/bn128_pp.hpp>
-#include <libff/algebra/curves/public_params.hpp>
+#include <libff/algebra/curves/bls12_381/bls12_381_pp.hpp>
+#endif
+
+
+#ifdef CURVE_BN128
 #include <libff/algebra/curves/bn128/bn128_init.hpp>
 #include <libff/algebra/curves/bn128/bn128_g1.hpp>
 #include <libff/algebra/curves/bn128/bn_utils.hpp>
+#endif
+
+#include <libff/algebra/curves/public_params.hpp>
+
 
 #include <libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp>
 
@@ -196,10 +205,23 @@ int main(void)
 
 {
     libff::start_profiling();
-    libff::bn128_pp::init_public_params();
-    typedef libff::Fr<libff::bn128_pp> FieldT;
-    proof_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT>, libff::bn128_pp>();
+    // libff::bn128_pp::init_public_params();
+
+    #ifdef CURVE_BLS12_381
+    std::cout<<"I am using CURVE_BLS12_381 \n";
+    #endif
+
+
+    #ifdef CURVE_BN128
+    std::cout<<"I am using CURVE_BN128 \n";
+    #endif
+
+    
+    libff::bls12_381_pp::init_public_params();
+    typedef libff::Fr<libff::bls12_381_pp> FieldT;
+    proof_auth<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT>, libff::bls12_381_pp>();
     // libiop_example<FieldT, libsnark::sha256_two_to_one_hash_gadget<FieldT>, libff::bn128_pp>();
+
 
 
 }
