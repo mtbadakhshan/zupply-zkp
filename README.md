@@ -1,5 +1,5 @@
 # zupply-zkp
-This is the implementation of the zero-knowledge proof protocols in Zupply framework.
+This is the implementation of the zero-knowledge proof protocols in the Zupply framework.
 
 
 # Build instructions
